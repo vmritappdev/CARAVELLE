@@ -1,7 +1,6 @@
 import 'dart:convert';
 
-import 'package:caravelle/dashboard_naves/cart_screen.dart';
-import 'package:caravelle/dashboard_naves/whislist_screen.dart';
+
 import 'package:caravelle/model/offerscreen.dart';
 import 'package:caravelle/dashboard_naves/jewelery_screen.dart';
 import 'package:caravelle/uittility/app_theme.dart';
@@ -14,13 +13,17 @@ import 'package:http/http.dart' as http;
 class GoldShopOffersScreen extends StatefulWidget {
   final String? mainCategory;
   final String? subCategory;
- final String subProducts;
+  final String subProducts;
+  final String? product;
+  final String? type;
 
   const GoldShopOffersScreen({
     Key? key,
     this.mainCategory,
     this.subCategory,
     required this.subProducts,
+    this.product,
+    this.type,
   }) : super(key: key);
 
   @override
@@ -34,15 +37,98 @@ class _GoldShopOffersScreenState extends State<GoldShopOffersScreen> {
   bool _sortAscending = true;
 
   bool isLoading = true;
+  bool isLoadingMore = false;
   List<dynamic> totalData = [];
 
   List<Offer> offers = [];
+  int currentPage = 1;
+  bool hasMoreData = true;
 
+  // Separate controllers for each layout
+  final ScrollController _gridScrollController = ScrollController();
+  final ScrollController _horizontalScrollController = ScrollController();
+  final ScrollController _fullScreenScrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     fetchSubProductItems();
+    _setupScrollControllers();
+  }
+
+  void _setupScrollControllers() {
+    _gridScrollController.addListener(_onGridScroll);
+    _fullScreenScrollController.addListener(_onFullScreenScroll);
+  }
+
+  void _onGridScroll() {
+    if (_gridScrollController.position.pixels == _gridScrollController.position.maxScrollExtent && hasMoreData && !isLoadingMore) {
+      _loadMoreData();
+    }
+  }
+
+  void _onFullScreenScroll() {
+    if (_fullScreenScrollController.position.pixels == _fullScreenScrollController.position.maxScrollExtent && hasMoreData && !isLoadingMore) {
+      _loadMoreData();
+    }
+  }
+
+  Future<void> _loadMoreData() async {
+    if (isLoadingMore) return;
+    
+    setState(() {
+      isLoadingMore = true;
+    });
+
+    // Simulate API call delay
+    await Future.delayed(Duration(seconds: 2));
+
+    // Add more dummy data
+    final newOffers = [
+      Offer(
+        imagePath: 'assets/images/cara4.png',
+        title: "Gold Necklace ${offers.length + 1}",
+        originalPrice: "",
+        discountedPrice: "",
+        description: "Beautiful gold necklace",
+        grossWeight: "10.5g",
+        netWeight: "8.2g",
+        size: "18 inches",
+        tagNumber: "TAG-${offers.length + 1}",
+        status: 'ACTIVE',
+        subproduct: 'Necklace'
+      ),
+      Offer(
+        imagePath: 'assets/images/cara2.png',
+        title: "Gold Earrings ${offers.length + 2}",
+        originalPrice: "",
+        discountedPrice: "",
+        description: "Elegant gold earrings",
+        grossWeight: "5.2g",
+        netWeight: "4.1g",
+        size: "Small",
+        tagNumber: "TAG-${offers.length + 2}",
+        status: 'ACTIVE',
+        subproduct: 'Earrings'
+      ),
+    ];
+
+    setState(() {
+      offers.addAll(newOffers);
+      isLoadingMore = false;
+      currentPage++;
+      if (currentPage >= 3) {
+        hasMoreData = false;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _gridScrollController.dispose();
+    _horizontalScrollController.dispose();
+    _fullScreenScrollController.dispose();
+    super.dispose();
   }
 
   /// 🔹 Fetch Sub Product Items API Call
@@ -56,15 +142,28 @@ class _GoldShopOffersScreenState extends State<GoldShopOffersScreen> {
       Uri.parse('${baseUrl}sub_product_items.php'),
       body: {
         'token': token,
-        'sub_products': widget.subProducts, // single sub product name (e.g. LADIES BRACELET)
+        'sub_product': widget.subProducts,
+        'product': widget.product ?? '',
+        'type': widget.type ?? '',
       },
     );
 
     print('🔹 API URL: https://caravelle.in/barcode/app/sub_product_items.php');
+    print('🔹 Sent Product: ${widget.product}');
     print('🔹 Sent SubProduct: ${widget.subProducts}');
+    print('🔹 Sent Type: ${widget.type}');
     print('🔹 Status Code: ${response.statusCode}');
-    response.body.toString().split('\n').forEach((line) => print(line));
 
+    // ✅ Pretty print full JSON with brackets & indentation
+    try {
+      final decoded = json.decode(response.body);
+      const JsonEncoder encoder = JsonEncoder.withIndent('  ');
+      final prettyJson = encoder.convert(decoded);
+      print('✅ Full Response:\n$prettyJson');
+    } catch (e) {
+      print('⚠️ JSON Decode Error: $e');
+      print('Raw Response: ${response.body}');
+    }
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -72,17 +171,15 @@ class _GoldShopOffersScreenState extends State<GoldShopOffersScreen> {
       if (data['response'] == 'success' && data['total_data'] != null) {
         final List<dynamic> list = data['total_data'];
 
-        // ✅ Convert API response to Offer model list
         setState(() {
           offers = list.map((item) {
             return Offer(
-            imagePath: item['image'] != null && item['image'].isNotEmpty
-          ? "https://caravelle.in/barcode/images/${item['image']}"
-          : 'assets/images/cara4.png',
-
-
+              imagePath: (item['image_url'] != null && item['image_url'].isNotEmpty)
+                  ? item['image_url']
+                  : "",
               title: item['product']?.toString() ?? 'Unknown Product',
-              originalPrice: '', // optional: add if backend sends price
+              // 🟡 Here we apply your product/subproduct logic
+              originalPrice: item['design']?.toString() ?? '',
               discountedPrice: '',
               description: item['name']?.toString() ?? '',
               grossWeight: item['gross']?.toString() ?? '',
@@ -91,14 +188,11 @@ class _GoldShopOffersScreenState extends State<GoldShopOffersScreen> {
               tagNumber: item['barcode']?.toString() ?? '',
               status: item['status']?.toString() ?? '',
               subproduct: item['sub_product']?.toString() ?? '',
-
             );
           }).toList();
-
           isLoading = false;
         });
       } else {
-        // ❌ No Data
         setState(() {
           offers = [];
           isLoading = false;
@@ -106,7 +200,6 @@ class _GoldShopOffersScreenState extends State<GoldShopOffersScreen> {
         print('⚠️ No Data Found');
       }
     } else {
-      // ❌ Server Error
       setState(() {
         isLoading = false;
       });
@@ -120,1768 +213,694 @@ class _GoldShopOffersScreenState extends State<GoldShopOffersScreen> {
   }
 }
 
+
   // Layout types
-  int _selectedLayout = 0; // 0: Grid, 1: Horizontal, 2: Full Screen
+  int _selectedLayout = 0;
   
   // For bottom sheet filter
   List<String> _selectedCategories = [];
-  final List<String> _jewelryCategories = [
-    "Mangalasutra",
-    "Vaddanam", 
-    "Vanki",
-    "Earrings",
-    "Necklace",
-    "Bangles",
-    "Rings",
-    "Bridal Set",
-    "Temple Jewelry",
-  ];
 
   // Layout options data
   final List<LayoutOption> _layoutOptions = [
-  LayoutOption(
-    id: 0,
-    title: "",
-    subtitle: "",
-    icon: Icons.grid_view_rounded,
-    type: "grid",
-  ),
-  LayoutOption(
-    id: 1, 
-    title: "",
-    subtitle: "",
-    icon: Icons.view_carousel_rounded,
-    type: "horizontal",
-  ),
-  LayoutOption(
-    id: 2,
-    title: "",
-    subtitle: "",
-    icon: Icons.view_agenda_rounded,
-    type: "list",
-  ),
-];
+    LayoutOption(id: 0, title: "", subtitle: "", icon: Icons.grid_view_rounded, type: "grid"),
+    LayoutOption(id: 1, title: "", subtitle: "", icon: Icons.view_carousel_rounded, type: "horizontal"),
+    LayoutOption(id: 2, title: "", subtitle: "", icon: Icons.view_agenda_rounded, type: "list"),
+  ];
 
-  // Detail screen for each jewelry item
-  void _navigateToDetailScreen(BuildContext context, Offer offer) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => JewelryDetailScreen(offer: offer),
+void _navigateToDetailScreen(BuildContext context, Offer offer) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => JewelryDetailScreen(
+        offer: offer,
+        tagNumber: offer.tagNumber ?? '', // ✅ null అయితే empty string
       ),
-    );
-  }
+    ),
+  );
+}
 
-  // Add this method to parse weight
+
   double _parseWeight(String weight) {
     if (weight == null || weight.isEmpty) return 0.0;
     String cleanWeight = weight.replaceAll('g', '').trim();
     return double.tryParse(cleanWeight) ?? 0.0;
   }
 
-  List<Offer> get _filteredOffers {
-    List<Offer> filtered = List.from(offers);
-    
-    // Search filter
-    if (_searchController.text.isNotEmpty) {
-      filtered = filtered.where((offer) => 
-        offer.title.toLowerCase().contains(_searchController.text.toLowerCase()) ||
-        offer.description.toLowerCase().contains(_searchController.text.toLowerCase())
-      ).toList();
-    }
-    
-    // Category filter from bottom sheet
-    if (_selectedCategories.isNotEmpty) {
-      filtered = filtered.where((offer) {
-        for (String category in _selectedCategories) {
-          if (offer.title.toLowerCase().contains(category.toLowerCase())) {
-            return true;
-          }
+ List<Offer> get _filteredOffers {
+  List<Offer> filtered = List.from(offers);
+  
+  // ✅ Search filter - first 2 letters enter chesinappude work avutundi
+  if (_searchController.text.isNotEmpty && _searchController.text.length >= 2) {
+    final searchTerm = _searchController.text.toLowerCase();
+    filtered = filtered.where((offer) => 
+      offer.title.toLowerCase().contains(searchTerm) ||
+      offer.description.toLowerCase().contains(searchTerm) ||
+      (offer.subproduct?.toLowerCase().contains(searchTerm) ?? false)
+    ).toList();
+  }
+  
+  // Category filter
+  if (_selectedCategories.isNotEmpty) {
+    filtered = filtered.where((offer) {
+      for (String category in _selectedCategories) {
+        if (offer.title.toLowerCase().contains(category.toLowerCase()) ||
+            (offer.subproduct?.toLowerCase().contains(category.toLowerCase()) ?? false)) {
+          return true;
         }
-        return false;
-      }).toList();
-    }
-    
-    // Sort logic - UPDATED WITH WEIGHT AND DATE SORTING
-    if (_sortBy == "Weight") {
-      filtered.sort((a, b) {
-        double weightA = _parseWeight(a.grossWeight ?? "0");
-        double weightB = _parseWeight(b.grossWeight ?? "0");
-        return _sortAscending ? weightA.compareTo(weightB) : weightB.compareTo(weightA);
-      });
-    } else if (_sortBy == "Newest" || _sortBy == "Oldest") {
-      // For demo, using list index as creation order
-      filtered.sort((a, b) {
-        int indexA = offers.indexOf(a);
-        int indexB = offers.indexOf(b);
-        return _sortAscending ? indexA.compareTo(indexB) : indexB.compareTo(indexA);
-      });
-    }
-    
-    return filtered;
+      }
+      return false;
+    }).toList();
   }
-
   
-
-  // Show Layout Options Bottom Sheet
- void _showLayoutOptionsSheet(BuildContext context) {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.transparent,
-    builder: (context) {
-      return SafeArea(
-        child: Container(
-          height: 180.h, // Even more compact
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-          ),
-          child: Column(
-            children: [
-              // Header with close button
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: Colors.grey.shade200),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Layout",
-                      style: GoogleFonts.inter(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF2D3748),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: Icon(Icons.close, color: Colors.grey, size: 20.sp),
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints(),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Layout Options - Compact
-              Expanded(
-                child: Center(
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 24.w),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: _layoutOptions.map((layout) {
-                        return _buildCompactLayoutOption(layout);
-                      }).toList(),
-                    ),
-                  ),
-                ),
-              ),
-              
-              SizedBox(height: 16.h),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-}
-
-Widget _buildCompactLayoutOption(LayoutOption layout) {
-  bool isSelected = _selectedLayout == layout.id;
+  // Sort logic
+  if (_sortBy == "Weight") {
+    filtered.sort((a, b) {
+      double weightA = _parseWeight(a.grossWeight ?? "0");
+      double weightB = _parseWeight(b.grossWeight ?? "0");
+      return _sortAscending ? weightA.compareTo(weightB) : weightB.compareTo(weightA);
+    });
+  } else if (_sortBy == "Newest" || _sortBy == "Oldest") {
+    filtered.sort((a, b) {
+      int indexA = offers.indexOf(a);
+      int indexB = offers.indexOf(b);
+      return _sortAscending ? indexA.compareTo(indexB) : indexB.compareTo(indexA);
+    });
+  }
   
-  return GestureDetector(
-    onTap: () {
-      setState(() {
-        _selectedLayout = layout.id;
-      });
-      Navigator.pop(context);
-    },
-    child: Container(
-      width: 60.w,
-      height: 60.h,
-      decoration: BoxDecoration(
-        color: isSelected ? Colors.amber.shade50 : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isSelected ? Colors.amber.shade300 : Colors.grey.shade200,
-          width: isSelected ? 1.5 : 1,
-        ),
-        boxShadow: [
-          if (isSelected)
-          BoxShadow(
-            color: Colors.amber.withOpacity(0.15),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-            spreadRadius: 1,
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 3,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Icon(
-        layout.icon,
-        color: isSelected ? Colors.amber.shade700 : Colors.grey.shade600,
-        size: 24.sp,
-      ),
-    ),
-  );
+  return filtered;
 }
- void _showFilterBottomSheet(BuildContext context) {
-  // New filter state variables
-  double _minWeight = 0.0;
-  double _maxWeight = 50.0;
-  double _selectedSize = 5.0;
-  String _selectedDesignType = '';
-
-  final List<String> _designTypes = ['Plain', 'Studded with Stones'];
-
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) {
-      return SafeArea(
-        child: StatefulBuilder(
-          builder: (context, setModalState) {
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.9,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
-              ),
-              child: Column(
-                children: [
-                  // Header
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Filters",
-                          style: GoogleFonts.lato(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF2D3748),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: Icon(Icons.close, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  // Search Bar
-                  Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Container(
-                      height: 50.h,
-                      decoration: BoxDecoration(
-                        color: Color(0xFFF7F7F7),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: "Search categories...",
-                          hintStyle: GoogleFonts.inter(color: Colors.grey, fontSize: 13.h),
-                          prefixIcon: Icon(Icons.search, color: AppTheme.primaryColor),
-                          border: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                  // Section Title
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        "Select your favourite categories",
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF2D3748),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-                  
-                  // Categories List with Checkboxes - 2 columns layout
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Categories Grid
-                          GridView.builder(
-                            shrinkWrap: true,
-                            physics: NeverScrollableScrollPhysics(),
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 8.0,
-                              mainAxisSpacing: 8.0,
-                              childAspectRatio: 3.0,
-                            ),
-                            itemCount: _jewelryCategories.length,
-                            itemBuilder: (context, index) {
-                              final category = _jewelryCategories[index];
-                              final isSelected = _selectedCategories.contains(category);
-                              
-                              return Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.grey.shade200,
-                                  ),
-                                ),
-                                child: CheckboxListTile(
-                                  title: Text(
-                                    category,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF2D3748),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  value: isSelected,
-                                  onChanged: (bool? value) {
-                                    setModalState(() {
-                                      if (value == true) {
-                                        _selectedCategories.add(category);
-                                      } else {
-                                        _selectedCategories.remove(category);
-                                      }
-                                    });
-                                  },
-                                  activeColor: AppTheme.primaryColor,
-                                  checkColor: Colors.white,
-                                  controlAffinity: ListTileControlAffinity.leading,
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 8),
-                                  dense: true,
-                                ),
-                              );
-                            },
-                          ),
-
-                          SizedBox(height: 24.h),
-
-                          // NEW: Weight Range Section
-                          Container(
-                            padding: EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade200),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Weight Range (grams)",
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF2D3748),
-                                  ),
-                                ),
-                                SizedBox(height: 16.h),
-                                
-                                // Weight Input Fields in Single Row
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Container(
-                                        height: 50.h,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: Colors.grey.shade300),
-                                        ),
-                                        child: TextField(
-                                          keyboardType: TextInputType.number,
-                                          decoration: InputDecoration(
-                                            labelText: "From",
-                                            labelStyle: GoogleFonts.inter(fontSize: 12.sp),
-                                            border: InputBorder.none,
-                                            contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                                            suffixText: "g",
-                                            suffixStyle: GoogleFonts.inter(
-                                              color: Colors.grey,
-                                              fontSize: 12.sp,
-                                            ),
-                                          ),
-                                          onChanged: (value) {
-                                            setModalState(() {
-                                              _minWeight = double.tryParse(value) ?? 0.0;
-                                            });
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: 12.w),
-                                    Expanded(
-                                      child: Container(
-                                        height: 50.h,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: Colors.grey.shade300),
-                                        ),
-                                        child: TextField(
-                                          keyboardType: TextInputType.number,
-                                          decoration: InputDecoration(
-                                            labelText: "To",
-                                            labelStyle: GoogleFonts.inter(fontSize: 12.sp),
-                                            border: InputBorder.none,
-                                            contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                                            suffixText: "g",
-                                            suffixStyle: GoogleFonts.inter(
-                                              color: Colors.grey,
-                                              fontSize: 12.sp,
-                                            ),
-                                          ),
-                                          onChanged: (value) {
-                                            setModalState(() {
-                                              _maxWeight = double.tryParse(value) ?? 50.0;
-                                            });
-                                          },
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          SizedBox(height: 20.h),
-
-                          // NEW: Size Slider Section
-                          Container(
-                            padding: EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade200),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "Size",
-                                      style: GoogleFonts.inter(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF2D3748),
-                                      ),
-                                    ),
-                                    Text(
-                                      "${_selectedSize.toStringAsFixed(1)}",
-                                      style: GoogleFonts.inter(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppTheme.primaryColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 16.h),
-                                
-                                // Size Slider
-                                Slider(
-                                  value: _selectedSize,
-                                  min: 1.0,
-                                  max: 10.0,
-                                  divisions: 18, // For 0.5 increments
-                                  label: _selectedSize.toStringAsFixed(1),
-                                  activeColor: AppTheme.primaryColor,
-                                  inactiveColor: Colors.grey.shade300,
-                                  onChanged: (value) {
-                                    setModalState(() {
-                                      _selectedSize = value;
-                                    });
-                                  },
-                                ),
-                                
-                                // Size indicators
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "1",
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                    Text(
-                                      "10",
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          SizedBox(height: 20.h),
-
-                          // NEW: Design Type Section
-                          Container(
-                            padding: EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade200),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Design Type",
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF2D3748),
-                                  ),
-                                ),
-                                SizedBox(height: 12.h),
-                                
-                                // Design Type Selection
-                                Row(
-                                  children: _designTypes.map((type) {
-                                    final isSelected = _selectedDesignType == type;
-                                    return Expanded(
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          setModalState(() {
-                                            _selectedDesignType = type;
-                                          });
-                                        },
-                                        child: Container(
-                                          margin: EdgeInsets.symmetric(horizontal: 4.w),
-                                          padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 8.w),
-                                          decoration: BoxDecoration(
-                                            color: isSelected ? AppTheme.primaryColor : Colors.white,
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(
-                                              color: isSelected ? AppTheme.primaryColor : Colors.grey.shade300,
-                                              width: 1.5,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            type,
-                                            textAlign: TextAlign.center,
-                                            style: GoogleFonts.inter(
-                                              fontSize: 12.sp,
-                                              fontWeight: FontWeight.w500,
-                                              color: isSelected ? Colors.white : Color(0xFF2D3748),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          SizedBox(height: 20.h),
-                        ],
-                      ),
-                    ),
-                  ),
-                  
-                  // Bottom Actions
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border(top: BorderSide(color: Colors.grey.shade200)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              setModalState(() {
-                                _selectedCategories.clear();
-                                _minWeight = 0.0;
-                                _maxWeight = 50.0;
-                                _selectedSize = 5.0;
-                                _selectedDesignType = '';
-                              });
-                            },
-                            style: OutlinedButton.styleFrom(
-                              padding: EdgeInsets.symmetric(vertical: 12),
-                              side: BorderSide(color: AppTheme.primaryColor),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              "Clear All",
-                              style: GoogleFonts.inter(
-                                color: AppTheme.primaryColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 12.w),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              // Apply all filters
-                              setState(() {
-                                // You can store these filter values in your main state
-                                // and use them to filter your jewelry items
-                              });
-                              Navigator.pop(context);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryColor,
-                              padding: EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              "Apply Filters",
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      );
-    },
-  );
-}
-  final List<Offer> offers1 = [
-    Offer(
-      imagePath: 'assets/images/cara4.png',
-      title: "Gold Mangalasutra",
-      originalPrice: "",
-      discountedPrice: "",
-      description: "Traditional bridal mangalasutra with intricate design and premium 18K gold finish.",
-      grossWeight: "8.5g",
-      netWeight: "7.2g",
-      size: "22 inches",
-      tagNumber: "TAG-TMP-008",
-      status: 'status',
-      subproduct: 'sub_product'
-    ),
-    Offer(
-      imagePath: 'assets/images/cara2.png',
-      title: "Gold Vaddanam",
-      originalPrice: "",
-      discountedPrice: "",
-      description: "Elegant waist belt with detailed craftsmanship and precious stone work.",
-      grossWeight: "15.2g",
-      netWeight: "12.8g",
-      size: "32 inches", 
-      tagNumber: "TAG-TMP-008",
-       status: 'status',
-       subproduct: 'sub_product'
-    ),
-    Offer(
-      imagePath: 'assets/images/cara2.png',
-      title: "Gold Vanki",
-      originalPrice: "",
-      discountedPrice: "",
-      description: "Traditional armlet with classic design patterns and comfortable fit.",
-      grossWeight: "6.8g",
-      netWeight: "5.5g",
-      size: "Medium",
-      tagNumber: "TAG-TMP-008",
-       status: 'status',
-       subproduct: 'sub_product'
-    ),
-    Offer(
-      imagePath: 'assets/images/cara4.png',
-      title: "Diamond Earrings",
-      originalPrice: "",
-      discountedPrice: "",
-      description: "Luxurious diamond-studded earrings with premium 18K gold setting.",
-      grossWeight: "4.2g",
-      netWeight: "3.1g",
-      size: "Small",
-      tagNumber: "TAG-TMP-008",
-       status: 'status',
-       subproduct: 'sub_product'
-    ),
-    Offer(
-      imagePath: 'assets/images/cara2.png',
-      title: "Pearl Necklace",
-      originalPrice: "",
-      discountedPrice: "",
-      description: "Elegant pearl necklace with gold accents and secure clasp.",
-      grossWeight: "12.5g",
-      netWeight: "9.8g",
-      size: "18 inches",
-      tagNumber: "TAG-TMP-008",
-       status: 'status',
-       subproduct: 'sub_product'
-    ),
-    Offer(
-      imagePath: 'assets/images/cara3.png',
-      title: "Bridal Set",
-      originalPrice: "",
-      discountedPrice: "",
-      description: "Complete bridal jewelry set including necklace, earrings, and bangles.",
-      grossWeight: "45.6g",
-      netWeight: "38.2g",
-      size: "Set",
-      tagNumber: "TAG-TMP-008",
-       status: 'status',
-       subproduct: 'sub_product'
-    ),
-    Offer(
-      imagePath: 'assets/images/cara4.png',
-      title: "Gold Bangles",
-      originalPrice: "",
-      discountedPrice: "",
-      description: "Set of four traditional gold bangles with intricate carvings.",
-      grossWeight: "22.4g",
-      netWeight: "18.7g",
-      size: "2.5 inches",
-      tagNumber: "TAG-TMP-008",
-       status: 'status',
-       subproduct: 'sub_product'
-    ),
-    Offer(
-      imagePath: 'assets/images/cara4.png',
-      title: "Temple Jewelry",
-      originalPrice: "",
-      discountedPrice: "",
-      description: "Traditional temple-style jewelry with divine motifs and premium finish.",
-      grossWeight: "28.9g",
-      netWeight: "24.3g",
-      size: "20 inches",
-      tagNumber: "TAG-TMP-008",
-       status: 'status',
-       subproduct: 'sub_product'
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-   
-    return Scaffold(
-      backgroundColor: Color(0xFFF8F9FA),
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        centerTitle: true,
-        leading: Container(
-          margin: EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 8,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
-          child: IconButton(
-            icon: Icon(Icons.arrow_back, color: AppTheme.primaryColor, size: 20),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
-        title: Text(
-         widget.subProducts,
-          style: GoogleFonts.lato(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: AppTheme.headerSize,
-            letterSpacing: -0.5,
-          ),
-        ),
-        backgroundColor: AppTheme.primaryColor,
-        elevation: 0,
-        shadowColor: AppTheme.primaryColor.withOpacity(0.3),
-      ),
-      body: SafeArea(
-  child: Padding(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 🟢 Header Section
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-             
-            ],
-          ),
-        ),
-
-        // 🟢 Search Bar
-        Container(
-          height: 40.h,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: TextField(
-            controller: _searchController,
-            onChanged: (value) => setState(() {}),
-            decoration: InputDecoration(
-              hintText: "Search jewelry...",
-              hintStyle: GoogleFonts.inter(color: Colors.grey, fontSize: 10.h),
-              prefixIcon: Icon(Icons.search, color: AppTheme.primaryColor),
-              border: InputBorder.none,
-            ),
-          ),
-        ),
-      //  SizedBox(height: 16.h),
-
-        // 🟢 Filter + Layout + Sort Row
-      Padding(
-  padding: EdgeInsets.symmetric(horizontal: 0.w), // left-right equal padding
-  child: SizedBox(
-    height: 50.h,
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween, // 👈 Equal spacing
-      children: [
-        // 🔹 Filter Button
-        GestureDetector(
-          onTap: () => _showFilterBottomSheet(context),
+  void _showLayoutOptionsSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return SafeArea(
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.r, vertical: 8.r),
+            height: 180.h,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
             ),
-            child: Row(
+            child: Column(
               children: [
-                Icon(Icons.filter_list, color: AppTheme.primaryColor, size: 16.sp),
-                SizedBox(width: 4.w),
-                Text(
-                  _selectedCategories.isEmpty
-                      ? "Filter"
-                      : "Filter (${_selectedCategories.length})",
-                  style: GoogleFonts.inter(fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        // 🔹 Layout Button
-        GestureDetector(
-          onTap: () => _showLayoutOptionsSheet(context),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.r, vertical: 8.r),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.layers, color: AppTheme.primaryColor, size: 16.sp),
-                SizedBox(width: 4.w),
-                Text("Layout", style: GoogleFonts.inter(fontSize: 12)),
-                SizedBox(width: 4.w),
-                Icon(Icons.arrow_drop_down, color: AppTheme.primaryColor, size: 16.sp),
-              ],
-            ),
-          ),
-        ),
-
-        // 🔹 Sort Button
-        PopupMenuButton<String>(
-          onSelected: (value) {
-            setState(() {
-              if (value == "Weight Low to High") {
-                _sortBy = "Weight";
-                _sortAscending = true;
-              } else if (value == "Weight High to Low") {
-                _sortBy = "Weight";
-                _sortAscending = false;
-              } else if (value == "Newest First") {
-                _sortBy = "Newest";
-                _sortAscending = false;
-              } else if (value == "Oldest First") {
-                _sortBy = "Oldest";
-                _sortAscending = true;
-              } else {
-                _sortBy = "Default";
-              }
-            });
-          },
-          itemBuilder: (context) => const [
-            PopupMenuItem(value: "Default", child: Text("Default")),
-            PopupMenuItem(value: "Weight Low to High", child: Text("Weight Low to High")),
-            PopupMenuItem(value: "Weight High to Low", child: Text("Weight High to Low")),
-            PopupMenuItem(value: "Newest First", child: Text("Newest First")),
-            PopupMenuItem(value: "Oldest First", child: Text("Oldest First")),
-          ],
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.r, vertical: 8.r),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.sort, color: AppTheme.primaryColor, size: 16.sp),
-                SizedBox(width: 4.w),
-                Text("Sort", style: GoogleFonts.inter(fontSize: 12)),
-              ],
-            ),
-          ),
-        ),
-      ],
-    ),
-  ),
-),
-
-     //   SizedBox(height: 16.h),
-
-        // 🟢 Selected Filter Chips
-        if (_selectedCategories.isNotEmpty) ...[
-          SizedBox(
-            height: 40.h,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: _selectedCategories.map((category) {
-                return Container(
-                  margin: EdgeInsets.only(right: 8.r),
-                  child: Chip(
-                    label: Text(
-                      category,
-                      style: GoogleFonts.inter(
-                        fontSize: 11.sp,
-                        color: Colors.white,
-                      ),
-                    ),
-                    backgroundColor: AppTheme.primaryColor,
-                    deleteIcon: const Icon(Icons.close, size: 16, color: Colors.white),
-                    onDeleted: () {
-                      setState(() {
-                        _selectedCategories.remove(category);
-                      });
-                    },
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          SizedBox(height: 8.h),
-        ],
-
-        // 🟢 Current Layout Indicator
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                _layoutOptions[_selectedLayout].icon,
-                color: AppTheme.primaryColor,
-                size: 14,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                _layoutOptions[_selectedLayout].title,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.primaryColor,
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 8.h),
-
-        // 🟢 Main Content — Fixed logic
-        Expanded(
-          child: Builder(
-            builder: (context) {
-              if (isLoading) {
-                // Show loader while fetching
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (!isLoading && offers.isEmpty) {
-                // Show "No Products Found" only after loading finishes
-                return Center(
-                  child: Text(
-                    "No Products Found",
-                    style: GoogleFonts.inter(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[700],
-                    ),
-                  ),
-                );
-              }
-
-              // When products available — show content
-              return _buildContentByLayout();
-            },
-          ),
-        ),
-      ],
-    ),
-  ),
-),
-
-    );
-  }
-
-  Widget _buildContentByLayout() {
-    if (_filteredOffers.isEmpty) {
-      return Center(
-        child: Text(
-          "No products found",
-          style: GoogleFonts.inter(
-            color: Colors.grey,
-            fontSize: 16.sp,
-          ),
-        ),
-      );
-    }
-
-    switch (_selectedLayout) {
-      case 0: // Grid Layout
-        return _buildGridView();
-      case 1: // Horizontal Layout
-        return _buildHorizontalView();
-      case 2: // Full Screen Layout
-        return _buildFullScreenView();
-      default:
-        return _buildGridView();
-    }
-  }
-
-  // Grid View - BIGGER IMAGE
-  Widget _buildGridView() {
-    double screenWidth = MediaQuery.of(context).size.width;
-    return GridView.builder(
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: screenWidth < 400 ? 2 : 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.65,
-      ),
-      itemCount: _filteredOffers.length,
-      itemBuilder: (context, index) {
-        final offer = _filteredOffers[index];
-        return _buildPremiumProductCard(context, offer);
-      },
-    );
-  }
-
-  // Horizontal View - BIGGER IMAGE
- // UPDATED HORIZONTAL VIEW - WITH BIG IMAGE LIKE FULL SCREEN
-Widget _buildHorizontalView() {
-  return ListView.builder(
-    scrollDirection: Axis.horizontal,
-    itemCount: _filteredOffers.length,
-    itemBuilder: (context, index) {
-      final offer = _filteredOffers[index];
-      return Container(
-        width: 320.w, // INCREASED: More width for bigger content
-        margin: EdgeInsets.only(right: 16.w),
-        child: _buildHorizontalProductCard(offer), // NEW: Special horizontal card with big image
-      );
-    },
-  );
-}
-
-
-Widget _buildHorizontalProductCard(Offer offer) {
-  return GestureDetector(
-    onTap: () => _navigateToDetailScreen(context, offer),
-    child: Container(
-      constraints: BoxConstraints(
-      //  maxHeight: 300, // INCREASED: More height for text buttons
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // BIG IMAGE
-          Container(
-            width: double.infinity,
-            height: MediaQuery.of(context).size.height * 0.30,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              image: DecorationImage(
-               image: offer.imagePath != null && offer.imagePath.isNotEmpty
-          ? (offer.imagePath.startsWith('http')
-              ? NetworkImage(offer.imagePath)
-              : AssetImage(offer.imagePath) as ImageProvider)
-          : const AssetImage('assets/images/cara4.png'),
-                fit: BoxFit.cover,
-              ),
-            ),
-            child: Stack(
-              children: [
-                // Discount Badge
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: Container(
-  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-  decoration: BoxDecoration(
-    color: offer.status?.toUpperCase() == 'ACTIVE'
-        ? Colors.green
-        : Colors.red,
-    borderRadius: BorderRadius.circular(6),
-  ),
-  child: Text(
-    offer.status?.toUpperCase() == 'ACTIVE' ? 'In Stock' : 'Out  Stock',
-    style: GoogleFonts.inter(
-      color: Colors.white, // 👈 White text for visibility
-      fontSize: 10,
-      fontWeight: FontWeight.bold,
-    ),
-  ),
-),
-                ),
-                // Favorite and Cart Icons
-                Positioned(
-                  top: 10,
-                  right: 10,
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                  decoration: BoxDecoration(border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Cart Icon
-                      GestureDetector(
-                        onTap: () => _addToCart(offer),
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          margin: EdgeInsets.only(right: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 6,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            Icons.shopping_cart_outlined,
-                            color: AppTheme.primaryColor,
-                            size: 14.sp,
-                          ),
-                        ),
-                      ),
-                      // Favorite Icon
-                      GestureDetector(
-                        onTap: () => _addToWishlist(offer),
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 6,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            Icons.favorite_border,
-                            color: AppTheme.primaryColor,
-                            size: 14.sp,
-                          ),
-                        ),
-                      ),
+                      Text("Layout", style: GoogleFonts.inter(fontSize: 16.sp, fontWeight: FontWeight.w600, color: Color(0xFF2D3748))),
+                      IconButton(onPressed: () => Navigator.pop(context), icon: Icon(Icons.close, color: Colors.grey, size: 20.sp), padding: EdgeInsets.zero, constraints: BoxConstraints()),
                     ],
                   ),
                 ),
+                Expanded(
+                  child: Center(
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 24.w),
+                      decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(16)),
+                      child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: _layoutOptions.map((layout) => _buildCompactLayoutOption(layout)).toList()),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16.h),
               ],
             ),
           ),
-          
-          // CONTENT - WITH  horizantal desgin TEXT BUTTONS
-         Flexible(
-  fit: FlexFit.loose, // 👈 prevents stretching to full height
-  child: Padding(
-    padding: EdgeInsets.all(12.r),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min, // 👈 keeps it tight fit
-      children: [
-        // TITLE
-        Text(
-          (offer.subproduct != null && offer.subproduct!.isNotEmpty)
-              ? '${offer.title} - ${offer.subproduct}'
-              : offer.title,
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.w700,
-            fontSize: 14.sp,
-            color: const Color(0xFF2D3748),
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        SizedBox(height: 6.h),
-
-        // DETAILS BOX
-        Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8F9FA),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          padding: EdgeInsets.all(8.r),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildHorizontalDetailRow("Gross", offer.grossWeight ?? "N/A"),
-              _buildHorizontalDetailRow("Net", offer.netWeight ?? "N/A"),
-              if (offer.size != null)
-                _buildHorizontalDetailRow("Size", offer.size!),
-              if (offer.tagNumber != null)
-                _buildHorizontalDetailRow("Tag", offer.tagNumber!),
-            ],
-          ),
-        ),
-
-        SizedBox(height: 6.h), // 👈 reduced space above buttons
-
-        // BUTTONS ROW
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => _addToCart(offer),
-                icon: Icon(Icons.shopping_cart, size: 16.sp, color: Colors.white),
-                label: Text(
-                  "Add Cart",
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  padding: EdgeInsets.symmetric(vertical: 10.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  elevation: 0,
-                ),
-              ),
-            ),
-            SizedBox(width: 8.w),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _addToWishlist(offer),
-                icon: Icon(Icons.favorite_border,
-                    size: 16.sp, color: AppTheme.primaryColor),
-                label: Text(
-                  "Wishlist",
-                  style: GoogleFonts.inter(
-                    color: AppTheme.primaryColor,
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 10.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  side: BorderSide(color: AppTheme.primaryColor),
-                ),
-              ),
-            ),
-          ],
-        ),
-        // 👇 Removed any SizedBox after this (no bottom gap)
-      ],
-    ),
-  ),
-),
-
-
-          
-        ],
-      ),
-    ),
-  );
-}
-
-// UPDATED: DETAIL ROW FOR HORIZONTAL VIEW
-Widget _buildHorizontalDetailRow(String label, String value) {
-  return Padding(
-    padding: EdgeInsets.symmetric(vertical: 9.r),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[700],
-            fontSize: 10.sp,
-          ),
-        ),
-        Text(
-          value,
-          style: GoogleFonts.inter(
-            color: Color(0xFF2D3748),
-            fontSize: 10.sp,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-  // CHANGED: Full Screen View - VERTICAL SCROLL LIST
-  Widget _buildFullScreenView() {
-    return ListView.builder(
-      padding: EdgeInsets.only(bottom: 16.h),
-      itemCount: _filteredOffers.length,
-      itemBuilder: (context, index) {
-        final offer = _filteredOffers[index];
-        return Container(
-          margin: EdgeInsets.only(bottom: 16.h),
-          child: _buildFullScreenProductCard(offer),
         );
       },
     );
   }
 
-  // UPDATED PREMIUM PRODUCT CARD - BIGGER IMAGE & BETTER LAYOUT
-  Widget _buildPremiumProductCard(BuildContext context, Offer offer) {
+  Widget _buildCompactLayoutOption(LayoutOption layout) {
+    bool isSelected = _selectedLayout == layout.id;
     return GestureDetector(
-      onTap: () => _navigateToDetailScreen(context, offer),
+      onTap: () {
+        setState(() { _selectedLayout = layout.id; });
+        Navigator.pop(context);
+      },
       child: Container(
-        constraints: BoxConstraints(
-          maxHeight: 280.h,
-        ),
+        width: 60.w, height: 60.h,
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          color: isSelected ? Colors.amber.shade50 : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isSelected ? Colors.amber.shade300 : Colors.grey.shade200, width: isSelected ? 1.5 : 1),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 20,
-              offset: Offset(0, 8),
-            ),
+            if (isSelected) BoxShadow(color: Colors.amber.withOpacity(0.15), blurRadius: 8, offset: Offset(0, 2), spreadRadius: 1),
+            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 3, offset: Offset(0, 1)),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Image Container - BIGGER
-            Container(
-              height: 152.h,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                image: DecorationImage(
-                  image: AssetImage(offer.imagePath),
-                  fit: BoxFit.cover,
-                ),
-              ),
-              child: Stack(
-                children: [
-                  // Discount Badge
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: Container(
-  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-  decoration: BoxDecoration(
-    color: offer.status?.toUpperCase() == 'ACTIVE'
-        ? Colors.green
-        : Colors.red,
-    borderRadius: BorderRadius.circular(6),
+        child: Icon(layout.icon, color: isSelected ? Colors.amber.shade700 : Colors.grey.shade600, size: 24.sp),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Color(0xFFF8F9FA),
+   appBar: AppBar(
+  automaticallyImplyLeading: false,
+  centerTitle: false,
+  backgroundColor: AppTheme.primaryColor,
+  elevation: 0,
+  shadowColor: AppTheme.primaryColor.withOpacity(0.3),
+
+  leading: IconButton(
+    icon: Icon(Icons.arrow_back, color: Colors.white, size: 22),
+    onPressed: () => Navigator.pop(context),
   ),
-  child: Text(
-    offer.status?.toUpperCase() == 'ACTIVE' ? 'In Stock' : 'Out  Stock',
-    style: GoogleFonts.inter(
-      color: Colors.white, // 👈 White text for visibility
-      fontSize: 10,
-      fontWeight: FontWeight.bold,
+
+  title: Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(
+        widget.subProducts.toUpperCase(),
+        style: GoogleFonts.lato(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 15.sp,
+          letterSpacing: -0.5,
+        ),
+      ),
+      SizedBox(width: 6.w),
+      Text(
+        "(${_filteredOffers.length}) items",
+        style: GoogleFonts.inter(
+          color: Colors.white,
+          fontSize: 11.sp,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    ],
+  ),
+
+  actions: [
+    IconButton(
+      icon: Icon(Icons.favorite_border, color: Colors.white, size: 20),
+      onPressed: () {
+        // TODO: Favourite Action
+        print('❤️ Favourite clicked');
+      },
     ),
-  ),
+    IconButton(
+      icon: Icon(Icons.shopping_cart_outlined, color: Colors.white, size: 20),
+      onPressed: () {
+        // TODO: Cart Action
+        print('🛒 Cart clicked');
+      },
+    ),
+  ],
 ),
 
-                  ),
-                  // Favorite and Cart Icons
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Row(
-                      children: [
-                        // Cart Icon
-                        GestureDetector(
-                          onTap: () {
-                            _addToCart(offer);
-                          },
-                          child: Container(
-                            width: 28,
-                            height: 28,
-                            margin: EdgeInsets.only(right: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 6,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.shopping_cart_outlined,
-                              color: AppTheme.primaryColor,
-                              size: 14.sp,
-                            ),
-                          ),
-                        ),
-                        // Favorite Icon
-                        GestureDetector(
-                          onTap: () {
-                            _addToWishlist(offer);
-                          },
-                          child: Container(
-                            width: 28,
-                            height: 28,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 6,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.favorite_border,
-                              color: AppTheme.primaryColor,
-                              size: 14.sp,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-         
-            Flexible(
-              child: Padding(
-                padding: EdgeInsets.all(12.r),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Product Name
-                   Text(
-  (offer.subproduct != null && offer.subproduct!.isNotEmpty)
-      ? '${offer.title} - ${offer.subproduct}'
-      : offer.title,
-  style: GoogleFonts.inter(
-    fontWeight: FontWeight.w700,
-    fontSize: 14.sp,
-    color: const Color(0xFF2D3748),
-  ),
-  maxLines: 2,
-  overflow: TextOverflow.ellipsis,
-),
 
-                    SizedBox(height: 6.h),
-                    
-                    // Weight and Size Info - BETTER ORGANIZED
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (offer.grossWeight != null)
-                          Padding(
-                            padding: EdgeInsets.only(bottom: 2.h),
-                            child: Text(
-                              "Gross: ${offer.grossWeight}",
-                              style: GoogleFonts.inter(
-                                fontSize: 10.sp,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ),
-                        if (offer.netWeight != null)
-                          Padding(
-                            padding: EdgeInsets.only(bottom: 2.h),
-                            child: Text(
-                              "Net: ${offer.netWeight}",
-                              style: GoogleFonts.inter(
-                                fontSize: 10.sp,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ),
-
-                          if (offer.tagNumber != null )
-  Padding(
-    padding: EdgeInsets.only(bottom: 2.h),
-    child: Text(
-      "Tag No: ${offer.tagNumber}",
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Search Bar with Items Count
+              Row(
+                children: [
+                 Expanded(
+  child: Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12.r),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black12,
+          blurRadius: 6,
+          offset: Offset(0, 3),
+        ),
+      ],
+    ),
+    child: TextField(
+      controller: _searchController,
+      onChanged: (value) {
+        if (value.length >= 2) {
+          setState(() {});
+        } else if (value.isEmpty) {
+          setState(() {});
+        }
+      },
       style: GoogleFonts.inter(
-        fontSize: 10.sp,
-        color: Colors.grey[600],
+        fontSize: 13.sp,
+        fontWeight: FontWeight.w500,
+        color: Colors.black87,
+      ),
+      decoration: InputDecoration(
+        prefixIcon: Padding(
+          padding: EdgeInsets.only(left: 12.w, right: 8.w),
+          child: Icon(
+            Icons.search,
+            color: AppTheme.primaryColor,
+            size: 20.sp,
+          ),
+        ),
+        prefixIconConstraints: BoxConstraints(
+          minWidth: 32.w,
+          minHeight: 32.h,
+        ),
+        hintText: "Search jewelry...",
+        hintStyle: GoogleFonts.inter(
+          color: Colors.grey.shade500,
+          fontSize: 13.sp,
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: 16.w,
+          vertical: 10.h,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.r),
+          borderSide: BorderSide(color: AppTheme.primaryColor, width: 1.5),
+        ),
       ),
     ),
   ),
-                        if (offer.size != null)
-                          Padding(
-                            padding: EdgeInsets.only(bottom: 2.h),
-                            child: Text(
-                              "Size: ${offer.size}",
-                              style: GoogleFonts.inter(
-                                fontSize: 10.sp,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ),
+),
 
-                      
-                      ],
-                    ),
-                    
-                    // Price Section - BETTER VISIBILITY
-                    
-                    
-                  ],
+                 
+                ],
+              ),
+              SizedBox(height: 10.h),
+
+              // Filter + Layout + Sort Row
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 0.w),
+                child: SizedBox(
+                  height: 50.h,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Filter Button
+                      GestureDetector(
+                        onTap: () => _showFilterBottomSheet(context),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 16.r, vertical: 8.r),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))]),
+                          child: Row(children: [
+                            Icon(Icons.filter_list, color: AppTheme.primaryColor, size: 16.sp), SizedBox(width: 4.w),
+                            Text(_selectedCategories.isEmpty ? "Filter" : "Filter (${_selectedCategories.length})", style: GoogleFonts.inter(fontSize: 12)),
+                          ]),
+                        ),
+                      ),
+
+                      // Layout Button
+                      GestureDetector(
+                        onTap: () => _showLayoutOptionsSheet(context),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 16.r, vertical: 8.r),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))]),
+                          child: Row(children: [
+                            Icon(Icons.grid_view_rounded, color: AppTheme.primaryColor, size: 16.sp), SizedBox(width: 6.w),
+                            Text("Layout", style: GoogleFonts.inter(fontSize: 12, )),
+                            SizedBox(width: 4.w),
+                            Icon(Icons.arrow_drop_down, color: AppTheme.primaryColor, size: 16.sp),
+                          ]),
+                        ),
+                      ),
+
+                      // Sort Button
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          setState(() {
+                            if (value == "Weight Low to High") { _sortBy = "Weight"; _sortAscending = true; }
+                            else if (value == "Weight High to Low") { _sortBy = "Weight"; _sortAscending = false; }
+                            else if (value == "Newest First") { _sortBy = "Newest"; _sortAscending = false; }
+                            else if (value == "Oldest First") { _sortBy = "Oldest"; _sortAscending = true; }
+                            else { _sortBy = "Default"; }
+                          });
+                        },
+                        itemBuilder: (context) => const [
+                          PopupMenuItem(value: "Weight Low to High", child: Text("Weight Low to High")),
+                          PopupMenuItem(value: "Weight High to Low", child: Text("Weight High to Low")),
+                          PopupMenuItem(value: "Newest First", child: Text("Newest First")),
+                          PopupMenuItem(value: "Oldest First", child: Text("Oldest First")),
+                        ],
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 16.r, vertical: 8.r),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))]),
+                          child: Row(children: [
+                            Icon(Icons.sort, color: AppTheme.primaryColor, size: 16.sp), SizedBox(width: 4.w),
+                            Text("Sort", style: GoogleFonts.inter(fontSize: 12)),
+                          ]),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+
+              // Selected Filter Chips
+              if (_selectedCategories.isNotEmpty) ...[
+                SizedBox(height: 12.h),
+                SizedBox(
+                  height: 40.h,
+                  child: ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: _selectedCategories.map((category) {
+                      return Container(margin: EdgeInsets.only(right: 8.r), child: Chip(
+                        label: Text(category, style: GoogleFonts.inter(fontSize: 11.sp, color: Colors.white)),
+                        backgroundColor: AppTheme.primaryColor,
+                        deleteIcon: Icon(Icons.close, size: 16, color: Colors.white),
+                        onDeleted: () { setState(() { _selectedCategories.remove(category); }); },
+                      ));
+                    }).toList(),
+                  ),
+                ),
+              //  SizedBox(height: 8.h),
+              ],
+
+
+          SizedBox(height: 20.h),
+
+              // Main Content
+              Expanded(child: _buildContentByLayout()),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // UPDATED FULL SCREEN PRODUCT CARD - VERTICAL LIST ITEM
-  Widget _buildFullScreenProductCard(Offer offer) {
+  Widget _buildContentByLayout() {
+    if (isLoading) return Center(child: CircularProgressIndicator(color: AppTheme.primaryColor));
+    if (!isLoading && offers.isEmpty) return Center(child: Text("No Products Found", style: GoogleFonts.inter(fontSize: 14.sp, fontWeight: FontWeight.w600, color: Colors.grey[700])));
+    if (_filteredOffers.isEmpty) return Center(child: Text("No products found", style: GoogleFonts.inter(color: Colors.grey, fontSize: 16.sp)));
+
+    switch (_selectedLayout) {
+      case 0: return _buildGridView();
+      case 1: return _buildHorizontalView();
+      case 2: return _buildFullScreenView();
+      default: return _buildGridView();
+    }
+  }
+
+  // Grid View with Proper Scrollbar
+  Widget _buildGridView() {
+  double screenWidth = MediaQuery.of(context).size.width;
+  return RawScrollbar(
+    controller: _gridScrollController,
+    thumbColor: AppTheme.primaryColor,
+    trackColor: AppTheme.primaryColor.withOpacity(0.1),
+    thickness: 6.0,
+    radius: const Radius.circular(10),
+    thumbVisibility: true,
+    trackVisibility: false,
+    interactive: true,
+    child: GridView.builder(
+      controller: _gridScrollController,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: screenWidth < 400 ? 2 : 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.68,
+      ),
+      itemCount: _filteredOffers.length + (isLoadingMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index >= _filteredOffers.length) {
+          // 🔹 buildLoadingItem remove chesam → safe empty space
+          return const SizedBox.shrink();
+        }
+        final offer = _filteredOffers[index];
+        return _buildPremiumProductCard(context, offer);
+      },
+    ),
+  );
+}
+
+  // Horizontal View with Proper Scrollbar - IMPROVED
+  Widget _buildHorizontalView() {
+  return RawScrollbar(
+    controller: _horizontalScrollController,
+    thumbColor: AppTheme.primaryColor,
+    trackColor: AppTheme.primaryColor.withOpacity(0.1),
+    thickness: 5.0,
+    thumbVisibility: true,
+    trackVisibility: false,
+    interactive: true,
+    child: ListView.builder(
+      controller: _horizontalScrollController,
+      scrollDirection: Axis.horizontal,
+      padding: EdgeInsets.symmetric(vertical: 8.h),
+      itemCount: _filteredOffers.length,
+      itemBuilder: (context, index) {
+        final offer = _filteredOffers[index];
+        return Container(
+          width: 320.w, // ✅ Increased width for full screen design
+          margin: EdgeInsets.only(right: 12.w, left: index == 0 ? 8.w : 0),
+          child: _buildHorizontalProductCard(offer),
+        );
+      },
+    ),
+  );
+}
+
+
+  // Full Screen View with Proper Scrollbar
+Widget _buildFullScreenView() {
+  return RawScrollbar(
+    controller: _fullScreenScrollController,
+    thumbColor: AppTheme.primaryColor,
+    trackColor: AppTheme.primaryColor.withOpacity(0.1),
+    thickness: 6.0,
+    radius: Radius.circular(10),
+    thumbVisibility: true,
+    trackVisibility: false,
+    interactive: true,
+    child: ListView.builder(
+      controller: _fullScreenScrollController,
+      padding: EdgeInsets.only(bottom: 16.h),
+      itemCount: _filteredOffers.length + (isLoadingMore ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index >= _filteredOffers.length) {
+          // 🔹 buildLoadingItem remove chesam → safe empty widget
+          return const SizedBox.shrink();
+        }
+        final offer = _filteredOffers[index];
+        return Container(
+          margin: EdgeInsets.only(bottom: 12.h, left: 8.w, right: 8.w),
+          child: _buildFullScreenProductCard(offer),
+        );
+      },
+    ),
+  );
+}
+
+  // Loading Item for Infinite Scroll
+
+
+  // Horizontal Product Card - IMPROVED (Compact with Cart/Wishlist)
+ Widget _buildHorizontalProductCard(Offer offer) {
+  return GestureDetector(
+    onTap: () => _navigateToDetailScreen(context, offer),
+    child: Container(
+      margin: EdgeInsets.symmetric(vertical: 8.h, horizontal: 12.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          )
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: SingleChildScrollView( // ✅ Prevents overflow safely
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 🔹 Image Section
+              Container(
+                width: double.infinity,
+                height: MediaQuery.of(context).size.height * 0.25, // ✅ Responsive height
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: _getImageProvider(offer.imagePath),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    // 🔹 Status Tag
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: offer.status?.toUpperCase() == 'ACTIVE'
+                              ? Colors.green
+                              : Colors.red,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          offer.status?.toUpperCase() == 'ACTIVE'
+                              ? 'In Stock'
+                              : 'Out of Stock',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // 🔹 Cart & Wishlist Icons
+                    Positioned(
+                      top: 12,
+                      right: 12,
+                      child: Row(
+                        children: [
+                          _buildIconButton(
+                            Icons.shopping_cart_outlined,
+                            () => _addToCart(offer),
+                            size: 16.sp,
+                          ),
+                          SizedBox(width: 8.w),
+                          _buildIconButton(
+                            Icons.favorite_border,
+                            () => _addToWishlist(offer),
+                            size: 16.sp,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // 🔹 Product Details Section
+              Padding(
+                padding: EdgeInsets.all(16.r),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                RichText(
+  text: TextSpan(
+    children: [
+      // 🔹 Subproduct లేదా Product
+      TextSpan(
+        text: (offer.subproduct != null && offer.subproduct!.isNotEmpty)
+            ? offer.subproduct!.toUpperCase()
+            : offer.title.toUpperCase(),
+        style: GoogleFonts.inter(
+          fontWeight: FontWeight.w700,
+          fontSize: 16.sp,
+          color: const Color(0xFF2D3748),
+        ),
+      ),
+
+      // 🔹 OriginalPrice ఉంటే మాత్రమే brackets లో చూపించు
+      if (offer.originalPrice != null &&
+          offer.originalPrice!.isNotEmpty)
+        TextSpan(
+          text: ' (${offer.originalPrice!.toUpperCase()})',
+          style: GoogleFonts.inter(
+            fontSize: 12.sp,
+            color: Colors.grey[600],
+          ),
+        ),
+    ],
+  ),
+  maxLines: 2,
+  overflow: TextOverflow.ellipsis,
+),
+
+
+                    SizedBox(height: 12.h),
+
+                    // Weight / Size / Tag Info Box
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8F9FA),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: EdgeInsets.all(12.r),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDetailRow("Gross Weight", offer.grossWeight ?? "N/A"),
+                          _buildDetailRow("Net Weight", offer.netWeight ?? "N/A"),
+                          if (offer.size != null && offer.size!.isNotEmpty)
+                            _buildDetailRow("Size", offer.size!),
+                          if (offer.tagNumber != null && offer.tagNumber!.isNotEmpty)
+                            _buildDetailRow("Tag Number", offer.tagNumber!),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+
+// ✅ Updated compact detail text with better styling
+
+  // Premium Product Card - IMPROVED
+  Widget _buildPremiumProductCard(BuildContext context, Offer offer) {
     return GestureDetector(
       onTap: () => _navigateToDetailScreen(context, offer),
       child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 8.h),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 20,
-              offset: Offset(0, 8),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: Offset(0, 2))],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image - BIGGEST
+            // Image with radius 5
             Container(
+              height: 140.h,
               width: double.infinity,
-              height: 250.h, // Big image for full screen view
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                image: DecorationImage(
-                  image: AssetImage(offer.imagePath),
-                  fit: BoxFit.cover,
-                ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(5)),
+                image: DecorationImage(image: _getImageProvider(offer.imagePath), fit: BoxFit.cover),
               ),
               child: Stack(
                 children: [
-                  // Discount Badge
                   Positioned(
-                    top: 12,
-                    left: 12,
+                    top: 8,
+                    left: 8,
                     child: Container(
-  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-  decoration: BoxDecoration(
-    color: offer.status?.toUpperCase() == 'ACTIVE'
-        ? Colors.green
-        : Colors.red,
-    borderRadius: BorderRadius.circular(6),
-  ),
-  child: Text(
-    offer.status?.toUpperCase() == 'ACTIVE' ? 'In Stock' : 'Out  Stock',
-    style: GoogleFonts.inter(
-      color: Colors.white, // 👈 White text for visibility
-      fontSize: 10,
-      fontWeight: FontWeight.bold,
-    ),
-  ),
-),
+                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: offer.status?.toUpperCase() == 'ACTIVE' ? Colors.green : Colors.red,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        offer.status?.toUpperCase() == 'ACTIVE' ? 'In Stock' : 'Out of Stock',
+                        style: GoogleFonts.inter(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ),
-                  // Favorite and Cart Icons
+                  // Cart & Wishlist Buttons
                   Positioned(
-                    top: 12,
-                    right: 12,
+                    top: 8,
+                    right: 8,
                     child: Row(
                       children: [
-                        // Cart Icon
-                        GestureDetector(
-                          onTap: () => _addToCart(offer),
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            margin: EdgeInsets.only(right: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 8,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.shopping_cart_outlined,
-                              color: AppTheme.primaryColor,
-                              size: 16.sp,
-                            ),
-                          ),
-                        ),
-                        // Favorite Icon
-                        GestureDetector(
-                          onTap: () => _addToWishlist(offer),
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 8,
-                                  offset: Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.favorite_border,
-                              color: AppTheme.primaryColor,
-                              size: 16.sp,
-                            ),
-                          ),
-                        ),
+                        _buildSmallIconButton(Icons.shopping_cart_outlined, () => _addToCart(offer)),
+                        SizedBox(width: 4),
+                        _buildSmallIconButton(Icons.favorite_border, () => _addToWishlist(offer)),
                       ],
                     ),
                   ),
@@ -1891,89 +910,51 @@ Widget _buildHorizontalDetailRow(String label, String value) {
             
             // Content
             Padding(
-              padding: EdgeInsets.all(20.r),
+              padding: EdgeInsets.all(10.r),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title
-                  Text(
-                    offer.title,
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 20.sp,
-                      color: Color(0xFF2D3748),
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
+                  // Product Name with Subproduct in brackets
+                RichText(
+  text: TextSpan(
+    children: [
+      // 🔹 Subproduct లేదా Product
+      TextSpan(
+        text: (offer.subproduct != null && offer.subproduct!.isNotEmpty)
+            ? offer.subproduct!.toUpperCase()
+            : offer.title.toUpperCase(),
+        style: GoogleFonts.inter(
+          fontWeight: FontWeight.w700,
+          fontSize: 11.sp,
+          color: const Color(0xFF2D3748),
+        ),
+      ),
 
-                  /*
+      // 🔹 OriginalPrice ఉంటే మాత్రమే brackets లో చూపించు
+      if (offer.originalPrice != null &&
+          offer.originalPrice!.isNotEmpty)
+        TextSpan(
+          text: ' (${offer.originalPrice!.toUpperCase()})',
+          style: GoogleFonts.inter(
+            fontSize: 10.sp,
+            color: Colors.grey[600],
+          ),
+        ),
+    ],
+  ),
+  maxLines: 2,
+  overflow: TextOverflow.ellipsis,
+),
+
+                  SizedBox(height: 6.h),
                   
-                  // Description
-                  Text(
-                    offer.description,
-                    style: GoogleFonts.inter(
-                      fontSize: 14.sp,
-                      color: Colors.grey[700],
-                      height: 1.5,
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-                  */
-                  
-                  // Details
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Color(0xFFF8F9FA),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: EdgeInsets.all(16.r),
-                    child: Column(
-                      children: [
-                        _buildDetailRow("Gross Weight", offer.grossWeight ?? "N/A"),
-                        _buildDetailRow("Net Weight", offer.netWeight ?? "N/A"),
-                        _buildDetailRow("Size", offer.size ?? "N/A"),
-                        _buildDetailRow("Tag Number", offer.tagNumber ?? "N/A"),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-                  
-                  // Price and Actions
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                     
-                      Row(
-                        children: [
-                          // Cart Button
-                          ElevatedButton.icon(
-                            onPressed: () => _addToCart(offer),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryColor,
-                              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            icon: Icon(Icons.shopping_cart, size: 16.sp),
-                            label: Text("Add to Cart"),
-                          ),
-                          SizedBox(width: 18.w),
-                          // Wishlist Button
-                          OutlinedButton.icon(
-                            onPressed: () => _addToWishlist(offer),
-                            style: OutlinedButton.styleFrom(
-                              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              side: BorderSide(color: AppTheme.primaryColor),
-                            ),
-                            icon: Icon(Icons.favorite_border, size: 16.sp),
-                            label: Text("Wishlist"),
-                          ),
-                        ],
-                      ),
+                      if (offer.grossWeight != null) _buildSmallDetailText("Gross: ${offer.grossWeight}"),
+                      if (offer.netWeight != null) _buildSmallDetailText("Net: ${offer.netWeight}"),
+                      if (offer.tagNumber != null) _buildSmallDetailText("Tag: ${offer.tagNumber}"),
+                      if (offer.size != null) _buildSmallDetailText("Size: ${offer.size}"),
                     ],
                   ),
                 ],
@@ -1985,105 +966,201 @@ Widget _buildHorizontalDetailRow(String label, String value) {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  // Full Screen Product Card - IMPROVED
+  Widget _buildFullScreenProductCard(Offer offer) {
+    return GestureDetector(
+      onTap: () => _navigateToDetailScreen(context, offer),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: Offset(0, 2))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image with radius 5
+            Container(
+              width: double.infinity,
+              height: 200.h, // Slightly reduced
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(5)),
+                image: DecorationImage(image: _getImageProvider(offer.imagePath), fit: BoxFit.cover),
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: offer.status?.toUpperCase() == 'ACTIVE' ? Colors.green : Colors.red,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        offer.status?.toUpperCase() == 'ACTIVE' ? 'In Stock' : 'Out of Stock',
+                        style: GoogleFonts.inter(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  // Cart & Wishlist Buttons
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Row(
+                      children: [
+                        _buildIconButton(Icons.shopping_cart_outlined, () => _addToCart(offer), size: 18.sp),
+                        SizedBox(width: 8),
+                        _buildIconButton(Icons.favorite_border, () => _addToWishlist(offer), size: 18.sp),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Content
+            Padding(
+              padding: EdgeInsets.all(16.r),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Product Name with Subproduct
+                 RichText(
+  text: TextSpan(
+    children: [
+      // 🔹 Subproduct లేదా Product
+      TextSpan(
+        text: (offer.subproduct != null && offer.subproduct!.isNotEmpty)
+            ? offer.subproduct!.toUpperCase()
+            : offer.title.toUpperCase(),
+        style: GoogleFonts.inter(
+          fontWeight: FontWeight.w700,
+          fontSize: 16.sp,
+          color: const Color(0xFF2D3748),
+        ),
+      ),
+
+      // 🔹 OriginalPrice ఉంటే మాత్రమే brackets లో చూపించు
+      if (offer.originalPrice != null &&
+          offer.originalPrice!.isNotEmpty)
+        TextSpan(
+          text: ' (${offer.originalPrice!.toUpperCase()})',
+          style: GoogleFonts.inter(
+            fontSize: 12.sp,
+            color: Colors.grey[600],
+          ),
+        ),
+    ],
+  ),
+  maxLines: 2,
+  overflow: TextOverflow.ellipsis,
+),
+
+                  SizedBox(height: 12.h),
+                  
+                  Container(
+                    decoration: BoxDecoration(color: Color(0xFFF8F9FA), borderRadius: BorderRadius.circular(8)),
+                    padding: EdgeInsets.all(12.r),
+                    child: Column(
+                      children: [
+                        _buildDetailRow("Gross Weight", offer.grossWeight ?? "N/A"),
+                        _buildDetailRow("Net Weight", offer.netWeight ?? "N/A"),
+                        if (offer.size != null) _buildDetailRow("Size", offer.size!),
+                        if (offer.tagNumber != null) _buildDetailRow("Tag Number", offer.tagNumber!),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper Widgets
+  Widget _buildIconButton(IconData icon, VoidCallback onTap, {double size = 14}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32, height: 32,
+        decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: Offset(0, 2))]),
+        child: Icon(icon, color: AppTheme.primaryColor, size: size),
+      ),
+    );
+  }
+
+  Widget _buildSmallIconButton(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 24, height: 24,
+        decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 2, offset: Offset(0, 1))]),
+        child: Icon(icon, color: AppTheme.primaryColor, size: 12),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, {bool isHorizontal = false}) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 6.h),
+      padding: EdgeInsets.symmetric(vertical: isHorizontal ? 4.h : 6.h),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
-              fontSize: 14.sp,
-            ),
-          ),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              color: Color(0xFF2D3748),
-              fontSize: 14.sp,
-            ),
-          ),
+          Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.grey[700], fontSize: isHorizontal ? 10.sp : 12.sp)),
+          Text(value, style: GoogleFonts.inter(color: Color(0xFF2D3748), fontSize: isHorizontal ? 10.sp : 12.sp)),
         ],
       ),
     );
   }
 
-  // SAME CART AND WISHLIST FUNCTIONS
-  void _addToCart(Offer offer) {
-    print("Added to cart: ${offer.title}");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white, size: 20),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                "${offer.title} added to cart",
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 3),
-        action: SnackBarAction(
-          label: "Go to Cart",
-          textColor: Colors.white,
-          onPressed: () {
-            Navigator.push(
-              context, 
-              MaterialPageRoute(builder: (context) => CartScreen())
-            );
-          },
-        ),
-      ),
+  Widget _buildSmallDetailText(String text) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 2.h),
+      child: Text(text, style: GoogleFonts.inter(fontSize: 9.sp, color: Colors.grey[600])),
     );
+  }
+
+ 
+
+  void _addToCart(Offer offer) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Row(children: [
+        Icon(Icons.check_circle, color: Colors.white, size: 20), SizedBox(width: 8),
+        Expanded(child: Text("${offer.title} added to cart", style: GoogleFonts.inter(color: Colors.white, fontSize: 14))),
+      ]),
+      backgroundColor: Colors.green, duration: Duration(seconds: 2),
+    ));
   }
 
   void _addToWishlist(Offer offer) {
-    print("Added to wishlist: ${offer.title}");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.favorite, color: Colors.white, size: 20),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                "${offer.title} added to wishlist",
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.orange,
-        duration: Duration(seconds: 3),
-        action: SnackBarAction(
-          label: "View Wishlist",
-          textColor: Colors.white,
-          onPressed: () {
-            Navigator.push(
-              context, 
-              MaterialPageRoute(builder: (context) => WishlistScreen())
-            );
-          },
-        ),
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Row(children: [
+        Icon(Icons.favorite, color: Colors.white, size: 20), SizedBox(width: 8),
+        Expanded(child: Text("${offer.title} added to wishlist", style: GoogleFonts.inter(color: Colors.white, fontSize: 14))),
+      ]),
+      backgroundColor: Colors.orange, duration: Duration(seconds: 2),
+    ));
+  }
+
+  ImageProvider<Object> _getImageProvider(String? path) {
+    final imagePath = path?.trim() ?? '';
+    if (imagePath.isNotEmpty && (imagePath.startsWith('http') || imagePath.startsWith('https'))) {
+    return NetworkImage(imagePath);
+    } else {
+      return AssetImage('assets/images/cara4.png');
+    }
+  }
+
+  // Filter Bottom Sheet method would go here...
+  void _showFilterBottomSheet(BuildContext context) {
+    // Your existing filter bottom sheet code
   }
 }
 
-// Layout Option Model
 class LayoutOption {
   final int id;
   final String title;
@@ -2091,11 +1168,5 @@ class LayoutOption {
   final IconData icon;
   final String type;
 
-  LayoutOption({
-    required this.id,
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.type,
-  });
+  LayoutOption({required this.id, required this.title, required this.subtitle, required this.icon, required this.type});
 }

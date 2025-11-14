@@ -662,68 +662,64 @@ Center(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔹 Header Row
+            // 🔹 Clean Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "✨ Basic Design",
-                  style: GoogleFonts.roboto(
-                    fontSize: 20.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black87,
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppTheme.primaryColor, AppTheme.primaryColor],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "✨Basic Design",
+                      style: GoogleFonts.roboto(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
+                      ),
                     ),
-                    borderRadius: BorderRadius.circular(12.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.teal.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
+                    SizedBox(height: 2.h),
+                    Text(
+                      "Explore our collection",
+                      style: GoogleFonts.roboto(
+                        fontSize: 12.sp,
+                        color: Colors.grey.shade600,
                       ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ViewAllProductsScreen(),
+                    ),
+                  ],
+                ),
+                // View All Button - Simple
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ViewAllProductsScreen(),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor,
+                      borderRadius: BorderRadius.circular(6.r),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          "View All",
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
                           ),
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(12.r),
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 16.w, vertical: 10.h),
-                        child: Row(
-                          children: [
-                            Text(
-                              "View All",
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                            SizedBox(width: 6.w),
-                            Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              size: 14.w,
-                              color: Colors.white,
-                            ),
-                          ],
                         ),
-                      ),
+                        SizedBox(width: 4.w),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          size: 10.w,
+                          color: Colors.white,
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -732,44 +728,53 @@ Center(
 
             SizedBox(height: 16.h),
 
-            // 🔹 Horizontal Scroll
+            // 🔹 Horizontal Scroll - Clean
             if (products != null && products.isNotEmpty)
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Row(
-                  children: products.take(5).map((product) {
-                    final productName =
-                        (product['product'] ?? '').toString().trim();
-                    final subProduct =
-                        (product['sub_product'] ?? '').toString().trim();
-                    final design =
-                        (product['design'] ?? '').toString().trim();
-                    final imageUrl =
-                        (product['image_url'] ?? '').toString().trim();
+              Container(
+                height: 160.h, // Fixed height for consistency
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: products.length > 5 ? 5 : products.length,
+                  itemBuilder: (context, index) {
+                    final product = products[index];
+                    final productName = (product['product'] ?? '').toString().trim();
+                    final subProduct = (product['sub_product'] ?? '').toString().trim();
+                    final design = (product['design'] ?? '').toString().trim();
+                    final imageUrl = (product['image_url'] ?? '').toString().trim();
 
-                    // 🧩 Text display logic
-                    String nameText = (subProduct.isEmpty ||
-                            subProduct.toLowerCase() == "null")
+                    String nameText = (subProduct.isEmpty || subProduct.toLowerCase() == "null")
                         ? productName
                         : subProduct;
 
-                    String designText =
-                        (design.isNotEmpty && design.toLowerCase() != "null")
-                            ? " ($design)"
-                            : "";
+                    String designText = (design.isNotEmpty && design.toLowerCase() != "null")
+                        ? design
+                        : "";
 
-                    return _buildProductCard(imageUrl, "$nameText$designText");
-                  }).toList(),
+                    return _buildProductCard(imageUrl, nameText, designText);
+                  },
                 ),
               )
             else
-              SizedBox(
+              Container(
                 height: 140.h,
-                child: const Center(
-                  child: Text(
-                    "Loading products...",
-                    style: TextStyle(color: Colors.grey),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        strokeWidth: 2.w,
+                        color: AppTheme.primaryColor,
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        "Loading...",
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -780,64 +785,84 @@ Center(
   );
 }
 
-Widget _buildProductCard(String imageUrl, String label) {
+Widget _buildProductCard(String imageUrl, String name, String design) {
   return Container(
-    margin: EdgeInsets.only(right: 16.w),
+    width: 130.w,
+   // margin: EdgeInsets.only(right: 12.w),
     child: Column(
       children: [
+        // 🔹 Image Box
         Container(
-          height: 120.h,
-          width: 120.w,
+          height: 100.h,
+          width: 100.w,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.2),
-                blurRadius: 8,
-                offset: const Offset(2, 4),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16.r),
-            child: imageUrl.isNotEmpty
-                ? Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: Colors.grey.shade200,
-                      child: const Icon(Icons.image, color: Colors.grey),
-                    ),
-                  )
-                : Container(
-                    color: Colors.grey.shade200,
-                    child: const Icon(Icons.image, color: Colors.grey),
-                  ),
-          ),
-        ),
-        SizedBox(height: 8.h),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12.r),
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20.r),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 4,
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: Text(
-            label,
-            style: GoogleFonts.roboto(
-              color: Colors.black87,
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w600,
-            ),
-            overflow: TextOverflow.ellipsis,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12.r),
+            child: imageUrl.isNotEmpty
+                ? Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey.shade100,
+                        child: Icon(
+                          Icons.photo_outlined,
+                          size: 24.w,
+                          color: Colors.grey.shade400,
+                        ),
+                      );
+                    },
+                  )
+                : Container(
+                    color: Colors.grey.shade100,
+                    child: Icon(
+                      Icons.photo_outlined,
+                      size: 24.w,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
           ),
+        ),
+
+        SizedBox(height: 8.h),
+
+        // 🔹 Sub Product + Design in One Center Row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center, // 👈 Center row content
+          children: [
+            Flexible(
+              child: Text(
+                name,
+                style: GoogleFonts.roboto(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (design.isNotEmpty) ...[
+              SizedBox(width: 4.w),
+              Text(
+                design,
+                style: GoogleFonts.roboto(
+                  fontSize: 11.sp,
+                  color: Colors.grey.shade600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
         ),
       ],
     ),

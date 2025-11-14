@@ -7,6 +7,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 
 class ProductCategoriesScreen extends StatefulWidget {
+  final String type; // 👈 Add this
+
+  const ProductCategoriesScreen({Key? key, required this.type}) : super(key: key);
+
   @override
   State<ProductCategoriesScreen> createState() => _ProductCategoriesScreenState();
 }
@@ -36,7 +40,7 @@ class _ProductCategoriesScreenState extends State<ProductCategoriesScreen> {
 
       final response = await http.post(
         Uri.parse(url),
-        body: {'token': token},
+        body: {'token': token,  'type': widget.type,},
       );
 
       print('🔵 API Status Code: ${response.statusCode}');
@@ -94,6 +98,10 @@ class _ProductCategoriesScreenState extends State<ProductCategoriesScreen> {
     });
   }
 
+
+
+
+  
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -102,7 +110,7 @@ class _ProductCategoriesScreenState extends State<ProductCategoriesScreen> {
         appBar: AppBar(
           iconTheme: const IconThemeData(color: AppTheme.primaryColor),
           title: Text(
-            'Categories',
+              '${widget.type.toUpperCase()} STOCK',
             style: TextStyle(
               color: AppTheme.primaryColor,
               fontWeight: FontWeight.bold,
@@ -283,19 +291,21 @@ class _ProductCategoriesScreenState extends State<ProductCategoriesScreen> {
                                 )
                               
   : GridView.builder(
-    itemCount: filteredCategories.length,
-    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-      crossAxisCount: 2,
-      mainAxisSpacing: 6.h,
-      crossAxisSpacing: 16.w,
-      childAspectRatio: 0.9,
-    ),
-    itemBuilder: (context, index) {
-      return CleanCategoryCard(
-        category: filteredCategories[index],
-      );
-    },
+  itemCount: filteredCategories.length,
+  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+    crossAxisCount: 2,
+    mainAxisSpacing: 6.h,
+    crossAxisSpacing: 16.w,
+    childAspectRatio: 0.9,
   ),
+  itemBuilder: (context, index) {
+    return CleanCategoryCard(
+      category: filteredCategories[index],
+      type: widget.type, // ✅ send the type from parent
+    );
+  },
+)
+
 ),
 
                 
@@ -320,17 +330,23 @@ class CategoryItem {
 /// Clean Category Card with Simple Image in Middle
 class CleanCategoryCard extends StatelessWidget {
   final CategoryItem category;
+  final String type; // ✅ add this
 
-  const CleanCategoryCard({Key? key, required this.category}) : super(key: key);
+  const CleanCategoryCard({Key? key, required this.category, required this.type})
+      : super(key: key);
 
   void _navigateToCategory(BuildContext context, String title) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SubCategoriesScreen(mainCategory: title),
+        builder: (context) => SubCategoriesScreen(
+          mainCategory: title,
+          type: type, // ✅ pass type here
+        ),
       ),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {

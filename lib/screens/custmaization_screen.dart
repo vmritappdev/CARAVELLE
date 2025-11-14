@@ -108,55 +108,86 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
 
   // --- TextField Helper with Red Star ---
   Widget _buildTextField(
-    TextEditingController controller,
-    String labelText, {
-    TextInputType keyboardType = TextInputType.text,
-    bool required = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (required)
-            RichText(
-              text: TextSpan(
-                text: labelText,
-                style: TextStyle(color: _kHintColor, fontSize: 15),
-                children: [
-                  TextSpan(
-                    text: ' *',
-                    style: TextStyle(color: Colors.red, fontSize: 16),
+  TextEditingController controller,
+  String labelText, {
+  TextInputType keyboardType = TextInputType.text,
+  bool required = false,
+}) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 16.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 🖤 Label text (black)
+        if (required)
+          RichText(
+            text: TextSpan(
+              text: labelText,
+              style: const TextStyle(
+                color: Colors.black, // ✅ label text black
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+              children: const [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontSize: 16,
                   ),
-                ],
-              ),
-            )
-          else
-            Text(labelText, style: TextStyle(color: _kHintColor, fontSize: 15)),
-          SizedBox(height: 4),
-          TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            style: TextStyle(color: _kTextColor),
-            decoration: InputDecoration(
-              hintStyle: TextStyle(color: _kHintColor.withOpacity(0.7), fontSize: 9),
-              enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: const Color.fromARGB(255, 236, 243, 242), width: 1.0),
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              floatingLabelStyle: TextStyle(color: AppTheme.primaryColor),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: _kPrimaryColor, width: 2.0),
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              filled: true,
-              fillColor: Colors.grey.shade50,
+                ),
+              ],
+            ),
+          )
+        else
+          Text(
+            labelText,
+            style: const TextStyle(
+              color: Colors.black, // ✅ black label text
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ],
-      ),
-    );
-  }
+
+        const SizedBox(height: 6),
+
+        // ✏️ Normal text field (unchanged background)
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          style: const TextStyle(color: Colors.black), // text inside field
+          decoration: InputDecoration(
+            hintStyle: TextStyle(
+              color: Colors.grey.shade500,
+              fontSize: 13,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(
+              color: Colors.grey.shade300,
+              width: 1.0,
+              ),
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: const BorderSide(
+                color: Colors.teal,
+                width: 2.0,
+              ),
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+            filled: true,
+            fillColor: Colors.grey.shade50, // keep default light field
+            contentPadding: const EdgeInsets.symmetric(
+              vertical: 14,
+              horizontal: 12,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 
   // --- Validate ONLY 3 Fields ---
  // --- Validate ONLY 3 Fields ---
@@ -521,7 +552,7 @@ bool _validateFields() {
 
               // COMMON FIELDS - Only Quantity is REQUIRED
               SizedBox(height: 20),
-              _buildTextField(_lengthController, 'Length (e.g., 18 cm)'),
+              _buildTextField(_lengthController, 'Length (e.g., 18 cm)',),
               _buildTextField(_weightController, 'Desired Weight (e.g., 5.2g)'),
              _buildTextField(_quantityController, 'Quantity', 
   keyboardType: TextInputType.number, required: true),

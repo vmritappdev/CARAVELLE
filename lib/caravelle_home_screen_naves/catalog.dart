@@ -134,10 +134,10 @@ class _ProductGalleryWidgetState extends State<ProductGalleryWidget> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "$nameText$designText",
+                          "$nameText$designText".toUpperCase(),
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: FontWeight.w500,
                           ),
                           maxLines: 2,

@@ -19,52 +19,194 @@ class _ViewAllProductsScreenState extends State<ViewAllProductsScreen> {
   bool isGridView = true;
   bool isLoading = true;
 
-  // screens/view_all_products_screen.dart - Alternative
-Future<void> _fetchProducts() async {
-  const apiUrl = "https://caravelle.in/barcode/app/no_access_products.php";
+  Future<void> _fetchProducts() async {
+    const apiUrl = "https://caravelle.in/barcode/app/no_access_products.php";
 
-  try {
-    final response = await http.post(
-      Uri.parse(apiUrl),
-      body: {'token': token},
-    );
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        body: {'token': token},
+      );
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
 
-      if (data is Map && data.containsKey('total_data')) {
-        final List<dynamic> list = data['total_data'] ?? [];
+        if (data is Map && data.containsKey('total_data')) {
+          final List<dynamic> list = data['total_data'] ?? [];
 
-        setState(() {
-          products = list.map<Product>((item) {
-            return Product(
-              id: item['id']?.toString() ?? '',
-              name: item['product']?.toString() ?? '',
-              subProduct: item['sub_product']?.toString() ?? '',
-              design: item['design']?.toString() ?? '',
-              image: item['image_url']?.toString() ?? '',
-              grossWeight: double.tryParse(item['gross']?.toString() ?? '0') ?? 0,
-              netWeight: double.tryParse(item['net']?.toString() ?? '0') ?? 0,
-              stoneCount: double.tryParse(item['stone']?.toString() ?? '0')?.round() ?? 0,
-               wight: double.tryParse(item['other_wt']?.toString() ?? '0')?.round() ?? 0,
-              tagno: item['barcode']?.toString() ?? '',
-              amount: double.tryParse(item['amount']?.toString() ?? '0') ?? 0,
-              status: item['status']?.toString() ?? '', // ✅ Default value
-            );
-          }).toList();
-          isLoading = false;
-        });
+          setState(() {
+            products = list.map<Product>((item) {
+              return Product(
+                id: item['id']?.toString() ?? '',
+                name: item['product']?.toString() ?? '',
+                subProduct: item['sub_product']?.toString() ?? '',
+                design: item['design']?.toString() ?? '',
+                image: item['image_url']?.toString() ?? '',
+                grossWeight: double.tryParse(item['gross']?.toString() ?? '0') ?? 0,
+                netWeight: double.tryParse(item['net']?.toString() ?? '0') ?? 0,
+                stoneCount: double.tryParse(item['stone']?.toString() ?? '0')?.round() ?? 0,
+                wight: double.tryParse(item['other_wt']?.toString() ?? '0')?.round() ?? 0,
+                tagno: item['barcode']?.toString() ?? '',
+                amount: double.tryParse(item['amount']?.toString() ?? '0') ?? 0,
+                status: item['status']?.toString() ?? '',
+              );
+            }).toList();
+            isLoading = false;
+          });
+        } else {
+          setState(() => isLoading = false);
+        }
       } else {
         setState(() => isLoading = false);
       }
-    } else {
+    } catch (e) {
+      print("🔥 Error fetching products: $e");
       setState(() => isLoading = false);
     }
-  } catch (e) {
-    print("🔥 Error fetching products: $e");
-    setState(() => isLoading = false);
   }
-}
+
+  // ✅ Image Click Function - Big Image with Details
+  void _showProductDetails(Product product) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        insetPadding: EdgeInsets.all(20.w),
+        child: SingleChildScrollView(
+          child: Container(
+            padding: EdgeInsets.all(20.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Big Image
+                Container(
+                  height: 250.h,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12.r),
+                    color: Colors.grey.shade100,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12.r),
+                    child: Image.network(
+                      product.image.isNotEmpty ? product.image : 'https://caravelle.in/barcode/images/no_image.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Icon(Icons.photo, size: 60.w, color: Colors.grey.shade400),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20.h),
+
+                // Product Name
+                Text(
+                  _getFullName(product),
+                  style: GoogleFonts.roboto(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16.h),
+
+                // Status
+                _buildStatusBadge(product.status),
+                SizedBox(height: 20.h),
+
+                // Product Details
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Column(
+                    children: [
+                  //    _buildDetailRow("Product ID", product.id),
+                      SizedBox(height: 8.h),
+                      _buildDetailRow("Gross Weight", "${product.grossWeight} g"),
+                      SizedBox(height: 8.h),
+                      _buildDetailRow("Net Weight", "${product.netWeight} g"),
+                      SizedBox(height: 8.h),
+                      _buildDetailRow("Stone Count", "${product.stoneCount}"),
+                      SizedBox(height: 8.h),
+                   //   _buildDetailRow("Stone Weight", "${product.wight.toStringAsFixed(2)} g"),
+                      SizedBox(height: 8.h),
+                      _buildDetailRow("Tag No", product.tagno),
+                      SizedBox(height: 8.h),
+                    //  _buildDetailRow("Amount", "₹${product.amount.toStringAsFixed(2)}"),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 20.h),
+
+                // Close Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 14.h),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                    ),
+                    child: Text(
+                      "Close",
+                      style: GoogleFonts.roboto(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ✅ Detail Row for Modal
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 4,
+          child: Text(
+            label,
+            style: GoogleFonts.roboto(
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade700,
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 6,
+          child: Text(
+            value,
+            style: GoogleFonts.roboto(
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+            textAlign: TextAlign.right,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -170,196 +312,194 @@ Future<void> _fetchProducts() async {
   }
 
   Widget _buildProductCard(Product product) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image with Status Badge
-          Stack(
-            children: [
-              Container(
-                height: 120.h,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(8.r)),
-                  color: Colors.grey.shade100,
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(8.r)),
-                  child: Image.network(
-                    product.image.isNotEmpty ? product.image : 'https://caravelle.in/barcode/images/no_image.png',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Center(
-                        child: Icon(Icons.photo, size: 40.w, color: Colors.grey.shade400),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              // ✅ Status Badge - Top Left
-              Positioned(
-                top: 8.h,
-                left: 8.w,
-                child: _buildStatusBadge(product.status),
-              ),
-            ],
-          ),
-
-          // Details
-          Padding(
-            padding: EdgeInsets.all(8.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onTap: () => _showProductDetails(product), // ✅ Image click functionality
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8.r),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image with Status Badge
+            Stack(
               children: [
-                Text(
-                  _getShortName(product),
-                  style: GoogleFonts.roboto(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w500,
+                Container(
+                  height: 120.h,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(8.r)),
+                    color: Colors.grey.shade100,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(8.r)),
+                    child: Image.network(
+                      product.image.isNotEmpty ? product.image : 'https://caravelle.in/barcode/images/no_image.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Icon(Icons.photo, size: 40.w, color: Colors.grey.shade400),
+                        );
+                      },
+                    ),
+                  ),
                 ),
-                SizedBox(height: 6.h),
-                _buildSimpleRow("Gross", "${product.grossWeight}g"),
-               _buildSimpleRow(
-  "Stone",
-  "${product.stoneCount} (${product.wight.toStringAsFixed(2)} g)",
-),
-
-                _buildSimpleRow("Net", "${product.netWeight}g"),
-                _buildSimpleRow("Tag No", product.tagno),
+                Positioned(
+                  top: 8.h,
+                  left: 8.w,
+                  child: _buildStatusBadge(product.status),
+                ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildProductListItem(Product product) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(
-        children: [
-          // Image with Status Badge
-          Stack(
-            children: [
-              Container(
-                width: 80.w,
-                height: 80.h,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.horizontal(left: Radius.circular(8.r)),
-                  color: Colors.grey.shade100,
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.horizontal(left: Radius.circular(8.r)),
-                  child: Image.network(
-                    product.image.isNotEmpty ? product.image : 'https://caravelle.in/barcode/images/no_image.png',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Center(
-                        child: Icon(Icons.photo, size: 24.w, color: Colors.grey.shade400),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              // ✅ Status Badge - Top Left
-              Positioned(
-                top: 4.h,
-                left: 4.w,
-                child: _buildStatusBadge(product.status),
-              ),
-            ],
-          ),
-
-          // Details
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.all(12.w),
+            // Details
+            Padding(
+              padding: EdgeInsets.all(8.w),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     _getShortName(product),
                     style: GoogleFonts.roboto(
-                      fontSize: 14.sp,
+                      fontSize: 12.sp,
                       fontWeight: FontWeight.w500,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   SizedBox(height: 6.h),
-                  Wrap(
-                    spacing: 8.w,
-                    children: [
-                      _buildSimpleChip("Gross: ${product.grossWeight}g"),
-                 _buildSimpleRow(
-  "Stone",
-  "${product.stoneCount} (${product.wight.toStringAsFixed(2)} g)",
-),
-
-
-                      _buildSimpleChip("Net: ${product.netWeight}g"),
-                    ],
+                  _buildSimpleRow("Gross", "${product.grossWeight}g"),
+                  _buildSimpleRow(
+                    "Stone",
+                    "${product.stoneCount} (${product.wight.toStringAsFixed(2)} g)",
                   ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    "Tag: ${product.tagno}",
-                    style: GoogleFonts.roboto(
-                      fontSize: 11.sp,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
+                  _buildSimpleRow("Net", "${product.netWeight}g"),
+                  _buildSimpleRow("Tag No", product.tagno),
                 ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductListItem(Product product) {
+    return GestureDetector(
+      onTap: () => _showProductDetails(product), // ✅ Image click functionality
+      child: Container(
+        margin: EdgeInsets.only(bottom: 12.h),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8.r),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Row(
+          children: [
+            // Image with Status Badge
+            Stack(
+              children: [
+                Container(
+                  width: 80.w,
+                  height: 80.h,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.horizontal(left: Radius.circular(8.r)),
+                    color: Colors.grey.shade100,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.horizontal(left: Radius.circular(8.r)),
+                    child: Image.network(
+                      product.image.isNotEmpty ? product.image : 'https://caravelle.in/barcode/images/no_image.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Icon(Icons.photo, size: 24.w, color: Colors.grey.shade400),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 4.h,
+                  left: 4.w,
+                  child: _buildStatusBadge(product.status),
+                ),
+              ],
+            ),
+
+            // Details
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(12.w),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _getShortName(product),
+                      style: GoogleFonts.roboto(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 6.h),
+                    Wrap(
+                      spacing: 8.w,
+                      children: [
+                        _buildSimpleChip("Gross: ${product.grossWeight}g"),
+                        _buildSimpleChip("Stone: ${product.stoneCount}"),
+                        _buildSimpleChip("Net: ${product.netWeight}g"),
+                      ],
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      "Tag: ${product.tagno}",
+                      style: GoogleFonts.roboto(
+                        fontSize: 11.sp,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   // ✅ Status Badge Widget
-  // ✅ Status Badge Widget - Correct Logic
-Widget _buildStatusBadge(String status) {
-  final isInStock = status.toUpperCase() == "ACTIVE"; // ACTIVE check chestundi
-  
-  return Container(
-    padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-    decoration: BoxDecoration(
-      color: isInStock ? Colors.green : Colors.red, // ACTIVE=Green, other=Red
-      borderRadius: BorderRadius.circular(4.r),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.2),
-          blurRadius: 2,
-          offset: const Offset(0, 1),
-        ),
-      ],
-    ),
-    child: Text(
-      isInStock ? "In Stock" : "Out of Stock", // ACTIVE=In Stock, other=Out of Stock
-      style: GoogleFonts.roboto(
-        fontSize: 10.sp,
-        fontWeight: FontWeight.w600,
-        color: Colors.white,
+  Widget _buildStatusBadge(String status) {
+    final isInStock = status.toUpperCase() == "ACTIVE";
+    
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: isInStock ? Colors.green : Colors.red,
+        borderRadius: BorderRadius.circular(4.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
-    ),
-  );
-}
+      child: Text(
+        isInStock ? "In Stock" : "Out of Stock",
+        style: GoogleFonts.roboto(
+          fontSize: 10.sp,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
   Widget _buildSimpleRow(String label, String value) {
     return Padding(
       padding: EdgeInsets.only(bottom: 2.h),
@@ -405,6 +545,17 @@ Widget _buildStatusBadge(String status) {
     String name = p.name;
     if (p.subProduct.isNotEmpty && p.subProduct != "null") {
       name += " (${p.subProduct})";
+    }
+    return name;
+  }
+
+  String _getFullName(Product p) {
+    String name = p.name;
+    if (p.subProduct.isNotEmpty && p.subProduct != "null") {
+      name += " (${p.subProduct})";
+    }
+    if (p.design.isNotEmpty && p.design != "null") {
+      name += " - ${p.design}";
     }
     return name;
   }

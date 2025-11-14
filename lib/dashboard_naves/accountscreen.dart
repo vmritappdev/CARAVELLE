@@ -4,7 +4,7 @@ import 'package:caravelle/dashboard_naves/cart_screen.dart';
 import 'package:caravelle/dashboard_naves/contact_us.dart';
 import 'package:caravelle/dashboard_naves/faq_screen.dart';
 import 'package:caravelle/dashboard_naves/order_screen.dart';
-import 'package:caravelle/dashboard_naves/whislist_screen.dart';
+import 'package:caravelle/dashboard_naves/whislist_screen.dart' hide CartScreen;
 import 'package:caravelle/edit_screns/company_edit.dart';
 import 'package:caravelle/edit_screns/custmer_edit.dart';
 
@@ -107,7 +107,7 @@ Padding(
         ),
       ),
       style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.teal, // ✅ teal background for difference
+        backgroundColor: AppTheme.primaryColor, // ✅ teal background for difference
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8.r),
         ),
@@ -561,36 +561,29 @@ Widget _buildAccountSettingsSection(BuildContext context) {
 Future<void> logout(BuildContext context) async {
   final prefs = await SharedPreferences.getInstance();
 
-  // Step 1: Preserve 'isFirstTime' temporarily
-  final isFirstTime = prefs.getBool('isFirstTime') ?? false;
-
-  // Step 2: Check saved mobile number
-  final mobileNumber = prefs.getString('mobile_number');
-
-  // Step 3: Clear all preferences
+  // Clear all user data
   await prefs.clear();
 
-  // Step 4: Restore 'isFirstTime'
-  await prefs.setBool('isFirstTime', isFirstTime);
+  // Make sure Terms screen won't show again
+ await prefs.setBool('accepted_terms', true);
 
-  // Step 5: Navigate to appropriate screen
-  if (mobileNumber != null && mobileNumber.isNotEmpty) {
-    // Mobile number exists → go to MPIN screen
-    Navigator.pushReplacement(
-  context,
-  MaterialPageRoute(
-    builder: (context) => ScreenUtilInit(
-      designSize: const Size(360, 690),
-      minTextAdapt: true,
-      splitScreenMode: true,
-      useInheritedMediaQuery: true,
-      builder: (context, child) => const LoginPage(),
+
+  // Navigate to LoginPage directly
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(
+      builder: (context) => ScreenUtilInit(
+        designSize: const Size(360, 690),
+        minTextAdapt: true,
+        splitScreenMode: true,
+        useInheritedMediaQuery: true,
+        builder: (context, child) => const LoginPage(),
+      ),
     ),
-  ),
-);
-
-  } 
+    (route) => false,
+  );
 }
+
 }
 
 class _MenuItem {

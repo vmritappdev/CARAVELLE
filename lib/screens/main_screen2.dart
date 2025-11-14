@@ -1,6 +1,6 @@
 import 'package:caravelle/dashboard_naves/accountscreen.dart';
 import 'package:caravelle/dashboard_naves/cart_screen.dart';
-import 'package:caravelle/dashboard_naves/whislist_screen.dart';
+import 'package:caravelle/dashboard_naves/whislist_screen.dart' hide CartScreen;
 import 'package:caravelle/screens/caravelle_home2.dart';
 import 'package:caravelle/screens/categories_screen.dart';
 

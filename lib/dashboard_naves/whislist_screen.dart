@@ -1,139 +1,434 @@
-import 'package:caravelle/dashboard_naves/jewelery_screen.dart';
-import 'package:caravelle/model/whishlist.dart';
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:caravelle/model/offerscreen.dart';
+import 'package:caravelle/model/jewellerywhislist_model.dart';
 import 'package:caravelle/uittility/app_theme.dart';
+import 'package:flutter/material.dart';
 
 class WishlistScreen extends StatefulWidget {
   @override
-  _WishlistScreenState createState() => _WishlistScreenState();
+  _WishListScreenState createState() => _WishListScreenState();
 }
 
-class _WishlistScreenState extends State<WishlistScreen> {
-  List<Offer> wishlistedItems = [];
+class _WishListScreenState extends State<WishlistScreen> {
+  List<JewelleryItem> wishListItems = [
+    JewelleryItem(
+      id: 1,
+      name: "Solitaire Diamond Ring",
+      grossPrice: "₹2,50,000",
+      netPrice: "₹2,25,000",
+      stone: "Diamond",
+      purity: "18K Gold",
+      tag: "Engagement",
+      imageAsset: "assets/images/cara8.png",
+      isSelected: false,
+    ),
+    JewelleryItem(
+      id: 2,
+      name: "Pearl Necklace Set",
+      grossPrice: "₹85,000",
+      netPrice: "₹75,000",
+      stone: "Pearl",
+      purity: "22K Gold",
+      tag: "Traditional",
+      imageAsset: "assets/images/cara3.png",
+      isSelected: false,
+    ),
+    JewelleryItem(
+      id: 3,
+      name: "Emerald Stud Earrings",
+      grossPrice: "₹1,20,000",
+      netPrice: "₹1,05,000",
+      stone: "Emerald",
+      purity: "18K Gold",
+      tag: "Party Wear",
+      imageAsset: "assets/images/cara2.png",
+      isSelected: false,
+    ),
+    JewelleryItem(
+      id: 4,
+      name: "Gold Mangalsutra",
+      grossPrice: "₹1,50,000",
+      netPrice: "₹1,35,000",
+      stone: "Diamond",
+      purity: "22K Gold",
+      tag: "Traditional",
+      imageAsset: "assets/images/cara4.png",
+      isSelected: false,
+    ),
+  ];
 
-  @override
-  void initState() {
-    super.initState();
-    _loadWishlist(); // ✅ Load data when screen opens
-  }
-
-  Future<void> _loadWishlist() async {
-    await Wishlist().loadWishlist();
-    setState(() {
-      wishlistedItems = Wishlist().items;
-    });
-  }
+  bool selectAll = false;
 
   @override
   Widget build(BuildContext context) {
+    int selectedCount = wishListItems.where((item) => item.isSelected).length;
+
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        iconTheme: IconThemeData(color: Colors.white),
         title: Text(
-          'My Wishlist',
-          style: GoogleFonts.inter(
-            color: Colors.white,
-            fontSize: 20,
+          "My Wishlist",
+          style: TextStyle(
             fontWeight: FontWeight.w600,
+            color: Colors.black,
+            fontSize: 18,
           ),
         ),
-        backgroundColor: AppTheme.primaryColor,
-        //centerTitle: true,
-        elevation: 0,
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        centerTitle: true,
+        iconTheme: IconThemeData(color: Colors.black),
       ),
-      backgroundColor: Colors.white,
-      body: wishlistedItems.isEmpty
-          ? Center(
-              child: Text(
-                'Your wishlist is empty',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  color: Colors.grey,
+      body: Column(
+        children: [
+          Expanded(
+            child: wishListItems.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.favorite_border,
+                          size: 80,
+                          color: Colors.grey[400],
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          "Your wishlist is empty",
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          "Add items you love to your wishlist",
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: wishListItems.length,
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    itemBuilder: (context, index) {
+                      return _buildJewelleryItem(wishListItems[index]);
+                    },
+                  ),
+          ),
+          if (wishListItems.isNotEmpty) _buildBottomSection(selectedCount),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildJewelleryItem(JewelleryItem item) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: Colors.grey[100]!),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Product Image - Using actual image asset
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+                image: DecorationImage(
+                  image: AssetImage(item.imageAsset),
+                  fit: BoxFit.cover,
                 ),
               ),
-            )
-          : ListView.builder(
-              padding: EdgeInsets.all(16),
-              itemCount: wishlistedItems.length,
-              itemBuilder: (context, index) {
-                final item = wishlistedItems[index];
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => JewelryDetailScreen(offer: item),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    margin: EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 6,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
                     ),
-                    child: Row(
-                      children: [
-                        // Image
-                        ClipRRect(
-                          borderRadius: BorderRadius.horizontal(left: Radius.circular(16)),
-                          child: Image.asset(
-                            item.imagePath,
-                            width: 100,
-                            height: 100,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        // Title & Price
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.title,
-                                  style: GoogleFonts.playfairDisplay(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                SizedBox(height: 6),
-                                Text(
-                                  item.discountedPrice,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.primaryColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.favorite, color: Colors.red),
-                          onPressed: () async {
-                            Wishlist().toggleItem(item);
-                            await _loadWishlist(); // ✅ Refresh after removing/adding
-                          },
-                        ),
-                      ],
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 8),
+                  _buildDetailRow("Gross Price:", item.grossPrice),
+                  _buildDetailRow("Net Price:", item.netPrice),
+                  _buildDetailRow("Stone:", item.stone),
+                  _buildDetailRow("Purity:", item.purity),
+                  SizedBox(height: 8),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      item.tag,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                );
-              },
+                  SizedBox(height: 12),
+                  Row(
+                    children: [
+                      // Select Option
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            item.isSelected = !item.isSelected;
+                          });
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: item.isSelected 
+                              ? AppTheme.primaryColor 
+                              : Colors.transparent,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: item.isSelected 
+                                ? AppTheme.primaryColor 
+                                : Colors.grey[400]!,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                item.isSelected ? Icons.check : Icons.add,
+                                size: 14,
+                                color: item.isSelected ? Colors.white : Colors.grey[600],
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                "SELECT",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: item.isSelected ? Colors.white : Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Spacer(),
+                      // Remove Option
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            wishListItems.remove(item);
+                          });
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.red.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.favorite,
+                                size: 14,
+                                color: Colors.red,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                "REMOVE",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          SizedBox(width: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomSection(int selectedCount) {
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: Offset(0, -2),
+          ),
+        ],
+        border: Border(top: BorderSide(color: Colors.grey[100]!)),
+      ),
+      child: Column(
+        children: [
+          // Select All Option
+          Container(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      selectAll = !selectAll;
+                      for (var item in wishListItems) {
+                        item.isSelected = selectAll;
+                      }
+                    });
+                  },
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: selectAll ? AppTheme.primaryColor : Colors.grey[400]!,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(4),
+                          color: selectAll ? AppTheme.primaryColor : Colors.transparent,
+                        ),
+                        child: selectAll
+                            ? Icon(
+                                Icons.check,
+                                size: 14,
+                                color: Colors.white,
+                              )
+                            : null,
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        "SELECT ALL ITEMS",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 16),
+          // Add to Cart Button
+          Container(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed: selectedCount > 0
+                  ? () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '$selectedCount items added to cart!',
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          backgroundColor: AppTheme.primaryColor,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      );
+                    }
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.shopping_cart_outlined, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    "ADD TO CART ($selectedCount)",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

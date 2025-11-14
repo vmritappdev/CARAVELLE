@@ -2,12 +2,14 @@ import 'package:caravelle/model/cart.dart';
 import 'package:caravelle/model/whishlist.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:caravelle/screens/splash.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
    await Cart().loadFromPrefs(); // ✅ Load cart data at startup
   await Wishlist().loadWishlist(); // ✅ Load wishlist data at startup
   runApp(const MyApp());

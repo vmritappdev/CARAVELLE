@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:caravelle/caravelle_home_screen_naves/catalog.dart';
+import 'package:caravelle/caravelle_home_screen_naves/newarravel_section.dart';
 import 'package:caravelle/dashboard_naves/accountscreen.dart';
 import 'package:caravelle/dashboard_naves/18k_14k_categires.dart';
 import 'package:caravelle/caravelle_home_screen_naves/customexclsivedesgin.dart';
@@ -50,6 +51,7 @@ void initState() {
   super.initState();
   fetchImages();
   _checkValidityOnce();
+  fetchNewArrivals();
 }
 
 Future<void> _checkValidityOnce() async {
@@ -74,6 +76,38 @@ Future<void> _checkValidityOnce() async {
     );
   }
 }
+
+
+
+Future<void> fetchProducts(String type) async {
+  final url = Uri.parse('${baseUrl}product_display.php');
+
+  try {
+    // 👇 Prepare the body data
+    final body = {
+      'type': type,
+      'token': token,
+    };
+
+    print("🌐 API URL: $url");
+    print("📦 Request Body: $body");
+
+    final response = await http.post(url, body: body);
+
+    if (response.statusCode == 200) {
+      print("✅ API Success for type: $type");
+      print("🔗 Full Request URL: ${url.toString()}");
+      print("🧾 Response: ${response.body}");
+    } else {
+      print("❌ API Error: ${response.statusCode}");
+      print("❌ URL: ${url.toString()}");
+    }
+  } catch (e) {
+    print("⚠️ Exception: $e");
+    print("❗ Error calling: ${url.toString()}");
+  }
+}
+
 
 
 // ✅ Load mobile number and then call validity API
@@ -115,6 +149,42 @@ Future<void> fetchImages() async {
     if (!mounted) return;
     setState(() => isLoading = false);
     print('Error in fetchImages: $e');
+  }
+}
+
+
+Future<List<dynamic>> fetchNewArrivals() async {
+  final url = Uri.parse("${baseUrl}new_arrival.php");
+
+  try {
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: {'token': token}, // ✅ token body lo pass chestunnam
+    );
+
+    if (response.statusCode == 200) {
+      print("✅ API Response: ${response.body}");
+
+      final data = json.decode(response.body);
+
+      if (data is List) {
+        print("✅ Total items fetched: ${data.length}");
+        for (var item in data) {
+          print("🖼️ Image URL: ${item['image_url']}");
+        }
+        return data;
+      } else {
+        print("⚠️ Unexpected response format: ${data.runtimeType}");
+        return [];
+      }
+    } else {
+      print("❌ API Error: ${response.statusCode}");
+      return [];
+    }
+  } catch (e) {
+    print("❌ Exception: $e");
+    return [];
   }
 }
 
@@ -257,7 +327,7 @@ Future<void> fetchImages() async {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.star, color: AppTheme.primaryColor, size: 20),
+                                Icon(Icons.star, color: Colors.amber, size: 20),
                                 SizedBox(width: 8),
                                 Text(
                                   'Ready To Stock',
@@ -265,7 +335,7 @@ Future<void> fetchImages() async {
                                     color: Colors.white,
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    letterSpacing: 1.2,
+                                   // letterSpacing: 1.2,
                                   ),
                                 ),
                                 SizedBox(width: 8),
@@ -277,44 +347,50 @@ Future<void> fetchImages() async {
                           SizedBox(height: 10.h),
 
                           
-            
-                          // ---------------- Gold Boxes ----------------
-                     Container(
-  margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+         Container(
+  margin: EdgeInsets.symmetric(horizontal: 19.w, vertical: 14.h),
+  padding: EdgeInsets.all(12.w), // 🔹 Slightly reduced padding
   decoration: BoxDecoration(
     gradient: const LinearGradient(
       colors: [
-       // Color(0xFF006D6D), // Dark Teal
         AppTheme.primaryColor,
-        Color(0xFF00B3B3), // Light Teal
+        Color(0xFF00B3B3),
       ],
       begin: Alignment.centerLeft,
       end: Alignment.centerRight,
     ),
-    borderRadius: BorderRadius.circular(20.r),
+    borderRadius: BorderRadius.circular(18.r),
     boxShadow: [
       BoxShadow(
         color: Color(0xFF008080).withOpacity(0.15),
-        blurRadius: 8,
-        offset: const Offset(0, 2),
+        blurRadius: 6,
+        offset: const Offset(0, 3),
       ),
     ],
   ),
-  child: Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.center,
     children: [
-      Expanded(
-        child: _goldBox("CZ Jewellery"),
+      Row(
+        children: [
+          Expanded(child: _goldBox("CZ Jewellery", "cz")),
+          SizedBox(width: 8.w),
+          Expanded(child: _goldBox("Lab Diamonds", "diamond")),
+        ],
       ),
-      SizedBox(width: 10.w),
-      Expanded(
-        child: _goldBox("Lab Diamonds"),
+      SizedBox(height: 8.h),
+
+      
+      Align(
+        alignment: Alignment.center,
+        child: SizedBox(
+          width: 140.w, // 🔹 Reduced width for center box
+          child: _goldBox("Plain Jewellery", "plain"),
+        ),
       ),
     ],
   ),
 ),
-            
                           // ---------------- Exclusive Designs Grid ----------------
                          ExclusiveDesignsSection(),
             
@@ -334,7 +410,7 @@ Future<void> fetchImages() async {
 
 
                                 Text(
-                                  "Custom Orders",
+                                  "✨Custom Orders",
                                   style: TextStyle(
                                     color: Colors.black,
                                     fontSize: 18.sp,
@@ -417,77 +493,11 @@ Future<void> fetchImages() async {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      "New Arrival Design",
-                                      style: TextStyle(
-                                        fontSize: 18.sp,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                     Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.teal.shade600, Colors.teal.shade400],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.teal.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => GoldShopOffersScreen(subProducts: ''),
-                    ),
-                  );
-                },
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
-                  child: Row(
-                    children: [
-                      Text(
-                        "View All",
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                      SizedBox(width: 6.w),
-                      Icon(Icons.arrow_forward_ios_rounded,
-                      size: 14, color: Colors.white),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
+                                  
                                   ],
                                 ),
                                 SizedBox(height: 12.h),
-                                SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: Row(
-                                    children: [
-                                      _customImageCard("assets/images/cara3.png", "Necklace"),
-                                      _customImageCard("assets/images/cara4.png", "Ring"),
-                                      _customImageCard("assets/images/cara9.png", "Bracelet"),
-                                      _customImageCard("assets/images/cara2.png", "Earrings"),
-                                    ],
-                                  ),
-                                ),
+                             NewArrivalSection(),
                                 SizedBox(height: 26.h),
 
                            ProductGalleryWidget(),
@@ -550,12 +560,12 @@ Future<void> fetchImages() async {
                           children: [
                          Text(
   "CARAVELLE",
-  style: GoogleFonts.montserrat(
+  style: GoogleFonts.lato(
     color: Colors.white,
-    fontSize: 26.sp, // Slightly bigger for logo feel
+    fontSize: 20.sp, // Slightly bigger for logo feel
     fontWeight: FontWeight.w800, // Extra bold
     letterSpacing: 2.5, // Spaced for luxury branding
-    fontStyle: FontStyle.italic, // Stylish slant
+   // fontStyle: FontStyle.italic, // Stylish slant
     shadows: [
       Shadow(
         color: Colors.black26, // soft shadow for depth
@@ -602,56 +612,46 @@ Future<void> fetchImages() async {
     );
   }
 
- Widget _goldBox(String title) {
-  return Container(
-    // Remove fixed width: 190.w
-    height: 90.h,
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        GestureDetector(
-          onTap: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => ProductCategoriesScreen()));
-          },
-          child: Text(
-            title,
-            textAlign: TextAlign.center, // ← Add this
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+Widget _goldBox(String title, String type) {
+  return GestureDetector(
+   onTap: () async {
+      await fetchProducts(type);
+
+      // ✅ Navigate to next screen after API call success
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProductCategoriesScreen(type: type,),
         ),
-        SizedBox(height: 10.h),
-        InkWell(
-          onTap: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => ProductCategoriesScreen()));
-          },
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 6.h),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(30.r),
-            ),
-            child: const Text(
-              "View All Stock",
-              style: TextStyle(color: Colors.black87, fontSize: 13),
-            ),
+      );
+    },
+    child: Container(
+      height: 40.h, // 🔹 Reduced height (was 90.h)
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(19.r), // 🔹 Slightly smaller corners
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
           ),
+        ],
+      ),
+
+      child: Text(
+        title,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: AppTheme.primaryColor,
+          fontSize: 14.sp, // 🔹 Reduced font size
+          fontWeight: FontWeight.w600,
         ),
-      ],
+      ),
     ),
   );
 }
-
- 
 
   Widget _customImageCard(String imagePath, String label) {
     return Container(

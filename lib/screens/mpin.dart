@@ -203,14 +203,7 @@ Future<void> _authenticateUser() async {
         context,
         MaterialPageRoute(builder: (_) => const MainScreen()),
       );
-    } else {
-      // 👇 User cancelled or fingerprint failed → stay on same screen
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Authentication cancelled')),
-        );
-      }
-    }
+    } 
   } catch (e) {
     print('Auth error: $e');
     if (mounted) {

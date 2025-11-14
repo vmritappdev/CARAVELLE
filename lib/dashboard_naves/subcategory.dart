@@ -8,8 +8,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class SubCategoriesScreen extends StatefulWidget {
   final String mainCategory;
+    final String type;
 
-  const SubCategoriesScreen({Key? key, required this.mainCategory}) : super(key: key);
+  const SubCategoriesScreen({Key? key, required this.mainCategory,required this.type}) : super(key: key);
 
   @override
   State<SubCategoriesScreen> createState() => _SubCategoriesScreenState();
@@ -35,56 +36,66 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
 
   /// 🔹 Fetch Sub Products API Call
   Future<void> fetchSubProducts() async {
-    try {
-      setState(() {
-        isLoading = true;
-      });
+  try {
+    setState(() {
+      isLoading = true;
+    });
 
-      final response = await http.post(
-        Uri.parse('${baseUrl}sub_product_display.php'),
-        body: {
-          'token': token,
-          'product': widget.mainCategory,
-        },
-      );
+    final response = await http.post(
+      Uri.parse('${baseUrl}sub_product_display.php'),
+      body: {
+        'token': token,
+        'product': widget.mainCategory,
+        'type': widget.type,
+      },
+    );
 
-      print('🔹 API URL: ${baseUrl}sub_product_display.php');
-      print('🔹 Sent Product: ${widget.mainCategory}');
-      print('🔹 Status Code: ${response.statusCode}');
-      print('🔹 Response: ${response.body}');
+    print('🔹 API URL: ${baseUrl}sub_product_display.php');
+    print('🔹 Sent Product: ${widget.mainCategory}');
+    print('🔹 Sent Type: ${widget.type}');
+    print('🔹 Status Code: ${response.statusCode}');
+    print('🔹 Response: ${response.body}');
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
 
-        if (data['response'] == 'success' && data['data'] != null && data['data'].isNotEmpty) {
-          final List<dynamic> subList = data['data'][0]['sub_products'] ?? [];
+      if (data['response'] == 'success' && data['data'] != null && data['data'].isNotEmpty) {
+        final List<dynamic> subList = data['data'][0]['sub_products'] ?? [];
 
-          setState(() {
-            subProducts = subList;
-            filteredSubProducts = subList;
-            isLoading = false;
-          });
-        } else {
-          setState(() {
-            subProducts = [];
-            filteredSubProducts = [];
-            isLoading = false;
-          });
-          print('⚠️ No Sub Products Found');
-        }
-      } else {
+        // ✅ Convert to List<Map<String, dynamic>> (for image_url access)
         setState(() {
+          subProducts = List<Map<String, dynamic>>.from(subList);
+          filteredSubProducts = subProducts;
           isLoading = false;
         });
-        print('❌ Server Error: ${response.statusCode}');
+
+        print('✅ Total Sub Products: ${subProducts.length}');
+        for (var item in subProducts) {
+          print('📦 Name: ${item['name']} | 🖼️ Image: ${item['image_url']}');
+        }
+
+      } else {
+        setState(() {
+          subProducts = [];
+          filteredSubProducts = [];
+          isLoading = false;
+        });
+        print('⚠️ No Sub Products Found');
       }
-    } catch (e) {
-      print('⚠️ Exception: $e');
+    } else {
       setState(() {
         isLoading = false;
       });
+      print('❌ Server Error: ${response.statusCode}');
     }
+  } catch (e) {
+    print('⚠️ Exception: $e');
+    setState(() {
+      isLoading = false;
+    });
   }
+}
+
 
   /// 🔹 Search Filter Function
   void _filterSubProducts(String query) {
@@ -436,8 +447,9 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
                               padding: EdgeInsets.only(bottom: 16.h),
                               itemCount: filteredSubProducts.length,
                               itemBuilder: (context, index) {
-                                final name = filteredSubProducts[index];
-                                return _buildEnhancedSubProductCard(name, index);
+                              final subProduct = filteredSubProducts[index];
+               return _buildEnhancedSubProductCard(subProduct, index);
+
                               },
                             ),
                           ),
@@ -453,133 +465,149 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
   }
 
   /// 🔹 Enhanced Sub Product Card with Better Design
-  Widget _buildEnhancedSubProductCard(String name, int index) {
-    // Get appropriate icon based on subcategory name
-    IconData getSubCategoryIcon() {
-      final subName = name.toLowerCase();
-      if (subName.contains('ring') || subName.contains('bangle')) {
-        return Icons.workspace_premium;
-      } else if (subName.contains('chain') || subName.contains('necklace')) {
-        return Icons.favorite;
-      } else if (subName.contains('ear') || subName.contains('jhumka')) {
-        return Icons.hearing;
-      } else if (subName.contains('bracelet')) {
-        return Icons.watch;
-      } else if (subName.contains('coin') || subName.contains('bar')) {
-        return Icons.monetization_on;
-      } else {
-        return Icons.shopping_bag_rounded;
-      }
-    }
+ Widget _buildEnhancedSubProductCard(Map<String, dynamic> subProduct, int index) {
+  final name = subProduct['name'] ?? '';
+  final imageUrl = subProduct['image_url'] ?? '';
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20.r),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => GoldShopOffersScreen(
-                  mainCategory: widget.mainCategory,
-                  subCategory: name,
-                     subProducts: name,
-                ),
-              ),
-            );
-          },
-          child: Container(
-            padding: EdgeInsets.all(20.w),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white,
-                  Colors.grey.shade50,
-                ],
-              ),
-              borderRadius: BorderRadius.circular(20.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 15,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-              border: Border.all(
-                color: Colors.grey.shade200,
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                // Icon Container
-                Container(
-                  padding: EdgeInsets.all(12.w),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(14.r),
-                  ),
-                  child: Icon(
-                    getSubCategoryIcon(),
-                    color: AppTheme.primaryColor,
-                    size: 24.w,
-                  ),
-                ),
-                
-                SizedBox(width: 16.w),
-                
-                // Content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.grey.shade800,
-                          letterSpacing: 0.2,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 4.h),
-                      Text(
-                        '${widget.mainCategory} • Sub Category',
-                        style: TextStyle(
-                          fontSize: 12.sp,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                SizedBox(width: 12.w),
-                
-                // Arrow Icon
-                Container(
-                  padding: EdgeInsets.all(8.w),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.08),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 16.w,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
-              ],
+  IconData getSubCategoryIcon() {
+    final subName = name.toLowerCase();
+    if (subName.contains('ring') || subName.contains('bangle')) {
+      return Icons.workspace_premium;
+    } else if (subName.contains('chain') || subName.contains('necklace')) {
+      return Icons.favorite;
+    } else if (subName.contains('ear') || subName.contains('jhumka')) {
+      return Icons.hearing;
+    } else if (subName.contains('bracelet')) {
+      return Icons.watch;
+    } else if (subName.contains('coin') || subName.contains('bar')) {
+      return Icons.monetization_on;
+    } else {
+      return Icons.shopping_bag_rounded;
+    }
+  }
+
+  return Container(
+  margin: EdgeInsets.only(bottom: 12.h),
+  child: Material(
+    color: Colors.transparent,
+    child: InkWell(
+      borderRadius: BorderRadius.circular(20.r),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => GoldShopOffersScreen(
+              mainCategory: widget.mainCategory,
+              subCategory: name,
+              subProducts: name,
+                 product: widget.mainCategory, // ✅ pass product
+                  type: widget.type,            // ✅ pass type
             ),
           ),
+        );
+      },
+      child: Container(
+        padding: EdgeInsets.all(20.w),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              Colors.grey.shade50, // same subtle background tone
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06), // 👈 same as old shadow
+              blurRadius: 15,
+              offset: const Offset(0, 6),
+            ),
+          ],
+          border: Border.all(
+            color: Colors.grey.shade200,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // 🖼️ Image (no inner shadow)
+            Container(
+              width: 60.w,
+              height: 60.w,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16.r),
+                child: imageUrl.isNotEmpty
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Icon(Icons.broken_image,
+                                color: Colors.grey, size: 28.w),
+                      )
+                    : Container(
+                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        child: Icon(
+                          getSubCategoryIcon(),
+                          color: AppTheme.primaryColor,
+                          size: 28.w,
+                        ),
+                      ),
+              ),
+            ),
+
+            SizedBox(width: 16.w),
+
+            // 📝 Text content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey.shade800,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    '${widget.mainCategory} • Sub Category',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(width: 12.w),
+
+            // ➡️ Arrow Icon
+            Container(
+              padding: EdgeInsets.all(8.w),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 16.w,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  ),
+);
+
+}
+
 }
