@@ -209,13 +209,15 @@ if (collection != null && collection.isNotEmpty && collection != 'null') {
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {
+                  print("🟢 VIEW ALL clicked — Opening Exclisive Screen");
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => GoldShopOffersScreen(
                         mainCategory: "Exclusive Designs",
                         subCategory: "All Designs",
-                          subProducts: ''
+                          subProducts: '',
+                          fetchApiType: 'exclusiveCollection',
                       ),
                     ),
                   );
@@ -391,7 +393,7 @@ if (collection != null && collection.isNotEmpty && collection != 'null') {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(2),
+        borderRadius: BorderRadius.circular(6),
         child: Stack(
           children: [
             // Use NetworkImage for API URLs, AssetImage for local assets

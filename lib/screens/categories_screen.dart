@@ -265,7 +265,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => GoldShopOffersScreen(subProducts: ''),
+                builder: (context) => GoldShopOffersScreen(subProducts: '',fetchApiType: '',),
               ),
             );
           },

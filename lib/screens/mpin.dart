@@ -269,13 +269,13 @@ Future<void> _authenticateUser() async {
     bool isTransparent = false,
   }) {
     return Padding(
-      padding:  EdgeInsets.symmetric(vertical: 10.r), // Reduced padding
+      padding:  EdgeInsets.symmetric(vertical: 15.r), // Reduced padding
       child: InkWell(
         onTap: onTap,
         customBorder: const CircleBorder(),
         child: Container(
-          height: 55.h, // Smaller buttons
-          width: 55.w,
+          height: 50.h, // Smaller buttons
+          width: 50.w,
           decoration: BoxDecoration(
             color: isTransparent
                 ? Colors.transparent
@@ -301,7 +301,7 @@ Future<void> _authenticateUser() async {
                 : Text(
                     label,
                     style: GoogleFonts.poppins(
-                      fontSize: 24.sp, // Smaller font
+                      fontSize: 20.sp, // Smaller font
                       fontWeight: FontWeight.w500,
                       color: isTransparent ? Colors.transparent : textOnLight,
                     ),

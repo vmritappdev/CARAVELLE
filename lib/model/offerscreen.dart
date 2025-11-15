@@ -7,16 +7,18 @@ class Offer {
   final String? grossWeight;
   final String? netWeight;
   final String? size;
+  
  final String? status;
-  final String? subproduct;
+final String? subproduct;
 
-
+ String? whish;
   // New fields for jewelry details
   final String? tagNumber;
   final String? stoneType;
   final String? pureSize;
   final String? length;
   final String? pieces;
+  
   final String? subProductName;
 
   Offer({
@@ -25,6 +27,8 @@ class Offer {
     required this.originalPrice,
     required this.discountedPrice,
     required this.description,
+     this.whish,
+    
     this.grossWeight,
     this.netWeight,
     this.size,
@@ -45,6 +49,7 @@ class Offer {
         'originalPrice': originalPrice,
         'discountedPrice': discountedPrice,
         'description': description,
+        
         'grossWeight': grossWeight,
         'netWeight': netWeight,
         'size': size,
@@ -62,6 +67,9 @@ class Offer {
         imagePath: json['imagePath'],
         originalPrice: json['originalPrice'],
         discountedPrice: json['discountedPrice'],
+
+         whish: json['whislist']?.toString() ?? "",
+        
         description: json['description'],
         grossWeight: json['grossWeight'],
         netWeight: json['netWeight'],

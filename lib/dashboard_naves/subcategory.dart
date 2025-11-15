@@ -501,7 +501,8 @@ class _SubCategoriesScreenState extends State<SubCategoriesScreen> {
               subCategory: name,
               subProducts: name,
                  product: widget.mainCategory, // ✅ pass product
-                  type: widget.type,            // ✅ pass type
+                  type: widget.type,  
+                  fetchApiType: '',          // ✅ pass type
             ),
           ),
         );

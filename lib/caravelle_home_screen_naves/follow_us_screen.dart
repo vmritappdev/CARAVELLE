@@ -13,6 +13,17 @@ class FollowUsSection extends StatelessWidget {
     }
   }
 
+
+  Future<void> _openWhatsApp() async {
+  const phone = "919493206613"; // CountryCode + Number
+  final url = Uri.parse("https://wa.me/$phone");
+
+  if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+    throw Exception("Could not launch WhatsApp");
+  }
+}
+
+ 
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -72,14 +83,14 @@ class FollowUsSection extends StatelessWidget {
                 // 💬 WhatsApp
                 _buildSocialIcon(
                   assetPath: 'assets/images/what.png',
-                  onTap: () => _launchUrl('https://wa.me/91XXXXXXXXXX'),
+                  onTap: () => _openWhatsApp(),
                   backgroundColor: Colors.green.shade50,
                 ),
                 
                 // 📞 Call
                 _buildSocialIcon(
                   assetPath: 'assets/images/ca.png',
-                  onTap: () => _launchUrl('tel:+919876543210'),
+                  onTap: () => _launchUrl('tel:+919493206613'),
                   backgroundColor: Colors.red.shade50,
                 ),
               ],

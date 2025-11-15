@@ -25,7 +25,7 @@ class _NewArrivalSectionState extends State<NewArrivalSection> {
   }
 
   Future<void> _fetchNewArrivals() async {
-    final url = Uri.parse("https://caravelle.in/barcode/app/new_arrival.php");
+    final url = Uri.parse("${baseUrl}new_arrival.php");
 
     try {
       final response = await http.post(
@@ -115,7 +115,7 @@ class _NewArrivalSectionState extends State<NewArrivalSection> {
                         context,
                         MaterialPageRoute(
                           builder: (context) =>
-                              GoldShopOffersScreen(subProducts: ''),
+                              GoldShopOffersScreen(subProducts: '',fetchApiType: 'newArrival',),
                         ),
                       );
                     },

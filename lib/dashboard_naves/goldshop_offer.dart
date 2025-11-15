@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 class GoldShopOffersScreen extends StatefulWidget {
   final String? mainCategory;
@@ -16,12 +18,14 @@ class GoldShopOffersScreen extends StatefulWidget {
   final String subProducts;
   final String? product;
   final String? type;
+ final String fetchApiType;
 
   const GoldShopOffersScreen({
     Key? key,
     this.mainCategory,
     this.subCategory,
     required this.subProducts,
+     required this.fetchApiType,  
     this.product,
     this.type,
   }) : super(key: key);
@@ -44,17 +48,69 @@ class _GoldShopOffersScreenState extends State<GoldShopOffersScreen> {
   int currentPage = 1;
   bool hasMoreData = true;
 
+ String? _mobileNumber;
+Future<void> _loadMobileNumber() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  setState(() {
+    _mobileNumber = prefs.getString('mobile_number');
+  });
+}
+
+
+
+
+
+   List<String> _selectedCategories = [];
+  final List<String> _jewelryCategories = [
+    "Mangalasutra",
+    "Vaddanam", 
+    "Vanki",
+    "Earrings",
+    "Necklace",
+    "Bangles",
+    "Rings",
+    "Bridal Set",
+    "Temple Jewelry",
+  ];
+
   // Separate controllers for each layout
   final ScrollController _gridScrollController = ScrollController();
   final ScrollController _horizontalScrollController = ScrollController();
   final ScrollController _fullScreenScrollController = ScrollController();
 
-  @override
-  void initState() {
-    super.initState();
-    fetchSubProductItems();
-    _setupScrollControllers();
+
+ void printLong(String text) {
+  final pattern = RegExp('.{1,800}');
+  pattern.allMatches(text).forEach((m) => print(m.group(0)));
+}
+
+
+@override
+void initState() {
+  super.initState();
+
+  if (widget.fetchApiType == "bestSeller") {
+    fetchFullBestSellerData();
+  } 
+  else if (widget.fetchApiType == "exclusiveCollection") {
+    fetchExclusiveCollectionData();
   }
+  else if (widget.fetchApiType == "newArrival") {
+    fetchNewArrivalData();
+  }
+  else if (widget.fetchApiType == "catalogueProducts") {
+    fetchCatalogueProductsData();
+  }
+  else {
+    fetchSubProductItems();
+  }
+
+  _setupScrollControllers();
+  _loadMobileNumber();
+  
+}
+
+
 
   void _setupScrollControllers() {
     _gridScrollController.addListener(_onGridScroll);
@@ -138,33 +194,46 @@ class _GoldShopOffersScreenState extends State<GoldShopOffersScreen> {
       isLoading = true;
     });
 
+    // 1️⃣ Get Mobile Number
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? mobile = prefs.getString('mobile_number');
+
+    if (mobile == null || mobile.isEmpty) {
+      print("⚠️ No mobile number found in SharedPreferences");
+      setState(() => isLoading = false);
+      return;
+    }
+
+    // 2️⃣ API Call
     final response = await http.post(
       Uri.parse('${baseUrl}sub_product_items.php'),
       body: {
-        'token': token,
-        'sub_product': widget.subProducts,
-        'product': widget.product ?? '',
-        'type': widget.type ?? '',
+        "phone": mobile,
+        "token": token,
+        "sub_product": widget.subProducts,
+        "product": widget.product ?? '',
+        "type": widget.type ?? '',
       },
     );
 
     print('🔹 API URL: https://caravelle.in/barcode/app/sub_product_items.php');
-    print('🔹 Sent Product: ${widget.product}');
-    print('🔹 Sent SubProduct: ${widget.subProducts}');
-    print('🔹 Sent Type: ${widget.type}');
+    print('🔹 Phone: $mobile');
+    print('🔹 Product: ${widget.product}');
+    print('🔹 SubProduct: ${widget.subProducts}');
+    print('🔹 Type: ${widget.type}');
     print('🔹 Status Code: ${response.statusCode}');
 
-    // ✅ Pretty print full JSON with brackets & indentation
+    // 3️⃣ FULL JSON PRINT (Never truncated)
     try {
       final decoded = json.decode(response.body);
       const JsonEncoder encoder = JsonEncoder.withIndent('  ');
-      final prettyJson = encoder.convert(decoded);
-      print('✅ Full Response:\n$prettyJson');
+      printLong("✅ Full Response:\n${encoder.convert(decoded)}");
     } catch (e) {
-      print('⚠️ JSON Decode Error: $e');
-      print('Raw Response: ${response.body}');
+      print("⚠️ JSON Decode Error: $e");
+      printLong("Raw Response:\n${response.body}");
     }
 
+    // 4️⃣ Parse Response
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
 
@@ -174,13 +243,10 @@ class _GoldShopOffersScreenState extends State<GoldShopOffersScreen> {
         setState(() {
           offers = list.map((item) {
             return Offer(
-              imagePath: (item['image_url'] != null && item['image_url'].isNotEmpty)
-                  ? item['image_url']
-                  : "",
-              title: item['product']?.toString() ?? 'Unknown Product',
-              // 🟡 Here we apply your product/subproduct logic
+              imagePath: item['image_url']?.toString() ?? '',
+              title: item['product']?.toString() ?? 'Unknown',
               originalPrice: item['design']?.toString() ?? '',
-              discountedPrice: '',
+              discountedPrice: item['id']?.toString() ?? '',
               description: item['name']?.toString() ?? '',
               grossWeight: item['gross']?.toString() ?? '',
               netWeight: item['net']?.toString() ?? '',
@@ -190,35 +256,367 @@ class _GoldShopOffersScreenState extends State<GoldShopOffersScreen> {
               subproduct: item['sub_product']?.toString() ?? '',
             );
           }).toList();
+
           isLoading = false;
         });
       } else {
+        print("⚠️ No Data Found in total_data");
         setState(() {
           offers = [];
           isLoading = false;
         });
-        print('⚠️ No Data Found');
       }
     } else {
-      setState(() {
-        isLoading = false;
-      });
-      print('❌ Server Error: ${response.statusCode}');
+      print("❌ Server Error: ${response.statusCode}");
+      setState(() => isLoading = false);
     }
+
   } catch (e) {
-    print('⚠️ Exception: $e');
-    setState(() {
-      isLoading = false;
-    });
+    print("⚠️ Exception: $e");
+    setState(() => isLoading = false);
   }
 }
+
+
+Future<void> fetchFullBestSellerData() async {
+  final url = Uri.parse("https://caravelle.in/barcode/app/best_seller.php");
+
+  setState(() => isLoading = true);
+
+  try {
+    print("🔹 API URL: $url");
+    print("🔹 Sent Token: $token");
+
+    final response = await http.post(url, body: {"token": token});
+
+    print("🔹 Status Code: ${response.statusCode}");
+
+    // Full raw response
+    print("🔹 Raw Response: ${response.body}");
+
+    // Pretty JSON decode (with brackets & indentation)
+    try {
+      final decoded = json.decode(response.body);
+      const JsonEncoder encoder = JsonEncoder.withIndent('  ');
+      final prettyJson = encoder.convert(decoded);
+      print("✅ Full JSON Response:\n$prettyJson");
+    } catch (e) {
+      print("⚠️ JSON Decode Failed: $e");
+    }
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+
+      if (data["response"] == "success" && data["total_data"] != null) {
+
+        final List<dynamic> list = data["total_data"];
+
+        print("🟢 Total Items: ${list.length}");
+
+        setState(() {
+          offers = list.map((item) {
+            return Offer(
+              imagePath: item['image_url'] ?? "",
+              title: item['name'] ?? "",
+              originalPrice: item['design'] ?? "",
+              discountedPrice: "",
+              description: item['product'] ?? "",
+              grossWeight: item['gross'] ?? "",
+              netWeight: item['net'] ?? "",
+              size: item['touch'] ?? "",
+              tagNumber: item['barcode'] ?? "",
+              status: item['status'] ?? "",
+              subproduct: item['sub_product'] ?? "",
+            );
+          }).toList();
+
+          isLoading = false;
+        });
+
+      } else {
+        print("⚠️ No Data Found or Response != success");
+        setState(() => isLoading = false);
+      }
+    }
+  } catch (e) {
+    print("❌ Error: $e");
+    setState(() => isLoading = false);
+  }
+}
+
+
+
+
+Future<void> fetchExclusiveCollectionData() async {
+  final url = Uri.parse("${baseUrl}exclusive_collection.php");
+
+  setState(() => isLoading = true);
+
+  try {
+    print("🔹 API URL: $url");
+    print("🔹 Sent Token: $token");
+
+    final response = await http.post(url, body: {"token": token});
+
+    print("🔹 Status Code: ${response.statusCode}");
+    print("🔹 Raw Response: ${response.body}");
+
+    // Pretty JSON decode
+    try {
+      final decoded = json.decode(response.body);
+      const JsonEncoder encoder = JsonEncoder.withIndent('  ');
+      final prettyJson = encoder.convert(decoded);
+      print("✅ Full JSON Response:\n$prettyJson");
+    } catch (e) {
+      print("⚠️ JSON Decode Failed: $e");
+    }
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+
+      if (data["response"] == "success" && data["total_data"] != null) {
+
+        final List<dynamic> list = data["total_data"];
+        print("🟢 Total Items: ${list.length}");
+
+        setState(() {
+          offers = list.map((item) {
+            return Offer(
+              imagePath: item['image_url'] ?? "",
+              title: item['name'] ?? "",
+              originalPrice: item['design'] ?? "",
+              discountedPrice: "",
+              description: item['product'] ?? "",
+              grossWeight: item['gross'] ?? "",
+              netWeight: item['net'] ?? "",
+              size: item['touch'] ?? "",
+              tagNumber: item['barcode'] ?? "",
+              status: item['status'] ?? "",
+              subproduct: item['sub_product'] ?? "",
+            );
+          }).toList();
+
+          isLoading = false;
+        });
+
+      } else {
+        print("⚠️ No Data Found or Response != success");
+        setState(() => isLoading = false);
+      }
+    }
+  } catch (e) {
+    print("❌ Error: $e");
+    setState(() => isLoading = false);
+  }
+}
+
+
+
+Future<void> fetchNewArrivalData() async {
+  final url = Uri.parse("${baseUrl}new_arrival.php");
+
+  setState(() => isLoading = true);
+
+  try {
+    print("🔹 API URL: $url");
+    print("🔹 Sent Token: $token");
+
+    final response = await http.post(url, body: {"token": token});
+
+    print("🔹 Status Code: ${response.statusCode}");
+    print("🔹 Raw Response: ${response.body}");
+
+    // Pretty JSON decode
+    try {
+      final decoded = json.decode(response.body);
+      const JsonEncoder encoder = JsonEncoder.withIndent('  ');
+      final prettyJson = encoder.convert(decoded);
+      print("✅ Full JSON Response:\n$prettyJson");
+    } catch (e) {
+      print("⚠️ JSON Decode Failed: $e");
+    }
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+
+      if (data["response"] == "success" && data["total_data"] != null) {
+
+        final List<dynamic> list = data["total_data"];
+        print("🟢 Total Items: ${list.length}");
+
+        setState(() {
+          offers = list.map((item) {
+            return Offer(
+              imagePath: item['image_url'] ?? "",
+              title: item['name'] ?? "",
+              originalPrice: item['design'] ?? "",
+              discountedPrice: "",
+              description: item['product'] ?? "",
+              grossWeight: item['gross'] ?? "",
+              netWeight: item['net'] ?? "",
+              size: item['touch'] ?? "",
+              tagNumber: item['barcode'] ?? "",
+              status: item['status'] ?? "",
+              subproduct: item['sub_product'] ?? "",
+            );
+          }).toList();
+
+          isLoading = false;
+        });
+
+      } else {
+        print("⚠️ No Data Found or Response != success");
+        setState(() => isLoading = false);
+      }
+    }
+  } catch (e) {
+    print("❌ Error: $e");
+    setState(() => isLoading = false);
+  }
+}
+
+
+
+Future<void> fetchCatalogueProductsData() async {
+  final url = Uri.parse("$baseUrl/catalogue_products.php");
+
+  setState(() => isLoading = true);
+
+  try {
+    print("🔹 API URL: $url");
+    print("🔹 Sent Token: $token");
+
+    final response = await http.post(url, body: {"token": token});
+
+    print("🔹 Status Code: ${response.statusCode}");
+    print("🔹 Raw Response: ${response.body}");
+
+    // Pretty JSON decode
+    try {
+      final decoded = json.decode(response.body);
+      const JsonEncoder encoder = JsonEncoder.withIndent('  ');
+      final prettyJson = encoder.convert(decoded);
+      print("✅ Full JSON Response:\n$prettyJson");
+    } catch (e) {
+      print("⚠️ JSON Decode Failed: $e");
+    }
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+
+      if (data["response"] == "success" && data["total_data"] != null) {
+
+        final List<dynamic> list = data["total_data"];
+        print("🟢 Total Items: ${list.length}");
+
+        setState(() {
+          offers = list.map((item) {
+            return Offer(
+              imagePath: item['image_url'] ?? "",
+              title: item['name'] ?? "",
+              originalPrice: item['design'] ?? "",
+              discountedPrice: "",
+              description: item['product'] ?? "",
+              grossWeight: item['gross'] ?? "",
+              netWeight: item['net'] ?? "",
+              size: item['touch'] ?? "",
+              tagNumber: item['barcode'] ?? "",
+              status: item['status'] ?? "",
+              subproduct: item['sub_product'] ?? "",
+            );
+          }).toList();
+
+          isLoading = false;
+        });
+
+      } else {
+        print("⚠️ No Data Found or Response != success");
+        setState(() => isLoading = false);
+      }
+    }
+  } catch (e) {
+    print("❌ Error: $e");
+    setState(() => isLoading = false);
+  }
+}
+
+
+
+
+
+Future<void> addToWishlist(Offer offer) async {
+  try {
+    if (_mobileNumber == null || _mobileNumber!.isEmpty) {
+      print("⚠️ No mobile number found in SharedPreferences");
+      return;
+    }
+
+    final response = await http.post(
+      Uri.parse("${baseUrl}whislist.php"),
+      body: {
+        "phone": _mobileNumber,
+        "barcode": offer.tagNumber,
+        "id": offer.discountedPrice,
+        "token": token
+      },
+    );
+
+    print("🔹 Wishlist API URL: https://caravelle.in/barcode/app/whislist.php");
+    print("🔹 Sent Phone: $_mobileNumber");
+    print("🔹 Sent Barcode: ${offer.tagNumber}");
+    print("🔹 Sent ID: ${offer.discountedPrice}");
+    print("🔹 Status Code: ${response.statusCode}");
+    print("🔹 Raw Response: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+
+      print("✅ Wishlist Response: $data");
+
+      // -----------------------------
+      // ⭐ SHOW SNACKBAR WITH API MESSAGE
+      // -----------------------------
+      if (data["message"] != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.favorite, color: Colors.white),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    data["message"],   // ← API message
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } else {
+      print("❌ Server Error: ${response.statusCode}");
+    }
+  } catch (e) {
+    print("⚠️ Wishlist API Error: $e");
+  }
+}
+
+
+
+
 
 
   // Layout types
   int _selectedLayout = 0;
   
   // For bottom sheet filter
-  List<String> _selectedCategories = [];
+// List<String> _selectedCategories = [];
 
   // Layout options data
   final List<LayoutOption> _layoutOptions = [
@@ -241,7 +639,7 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
 
 
   double _parseWeight(String weight) {
-    if (weight == null || weight.isEmpty) return 0.0;
+    if (weight.isEmpty) return 0.0;
     String cleanWeight = weight.replaceAll('g', '').trim();
     return double.tryParse(cleanWeight) ?? 0.0;
   }
@@ -374,15 +772,25 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
   title: Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Text(
-        widget.subProducts.toUpperCase(),
-        style: GoogleFonts.lato(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-          fontSize: 15.sp,
-          letterSpacing: -0.5,
-        ),
-      ),
+ Text(
+  widget.fetchApiType == "bestSeller"
+      ? "BEST SELLER"
+      : widget.fetchApiType == "exclusiveCollection"
+          ? "EXCLUSIVE COLLECTION"
+          : widget.fetchApiType == "newArrival"
+              ? "NEW ARRIVAL"
+              : widget.fetchApiType == "catalogueProducts"
+                  ? "CATALOGUE PRODUCTS"
+                  : widget.subProducts.toUpperCase(),
+  style: GoogleFonts.lato(
+    color: Colors.white,
+    fontWeight: FontWeight.w700,
+    fontSize: 18.sp,
+    letterSpacing: -0.5,
+  ),
+),
+
+
       SizedBox(width: 6.w),
       Text(
         "(${_filteredOffers.length}) items",
@@ -394,6 +802,8 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
       ),
     ],
   ),
+
+  /*
 
   actions: [
     IconButton(
@@ -411,6 +821,8 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
       },
     ),
   ],
+
+  */
 ),
 
 
@@ -769,11 +1181,21 @@ Widget _buildFullScreenView() {
                             size: 16.sp,
                           ),
                           SizedBox(width: 8.w),
-                          _buildIconButton(
-                            Icons.favorite_border,
-                            () => _addToWishlist(offer),
-                            size: 16.sp,
-                          ),
+_buildIconButton(
+  offer.whish == "yes" ? Icons.favorite : Icons.favorite_border,
+  () async {
+    await addToWishlist(offer);
+
+    setState(() {
+      offer.whish = (offer.whish == "yes") ? "" : "yes";
+    });
+  },
+  size: 18.sp,
+  iconColor: offer.whish == "yes" ? Colors.red : Colors.grey,
+)
+
+
+
                         ],
                       ),
                     ),
@@ -803,10 +1225,9 @@ Widget _buildFullScreenView() {
       ),
 
       // 🔹 OriginalPrice ఉంటే మాత్రమే brackets లో చూపించు
-      if (offer.originalPrice != null &&
-          offer.originalPrice!.isNotEmpty)
+      if (offer.originalPrice.isNotEmpty)
         TextSpan(
-          text: ' (${offer.originalPrice!.toUpperCase()})',
+          text: ' (${offer.originalPrice.toUpperCase()})',
           style: GoogleFonts.inter(
             fontSize: 12.sp,
             color: Colors.grey[600],
@@ -855,116 +1276,124 @@ Widget _buildFullScreenView() {
 // ✅ Updated compact detail text with better styling
 
   // Premium Product Card - IMPROVED
-  Widget _buildPremiumProductCard(BuildContext context, Offer offer) {
-    return GestureDetector(
-      onTap: () => _navigateToDetailScreen(context, offer),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: Offset(0, 2))],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image with radius 5
-            Container(
-              height: 140.h,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(5)),
-                image: DecorationImage(image: _getImageProvider(offer.imagePath), fit: BoxFit.cover),
-              ),
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: offer.status?.toUpperCase() == 'ACTIVE' ? Colors.green : Colors.red,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        offer.status?.toUpperCase() == 'ACTIVE' ? 'In Stock' : 'Out of Stock',
-                        style: GoogleFonts.inter(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  // Cart & Wishlist Buttons
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Row(
-                      children: [
-                        _buildSmallIconButton(Icons.shopping_cart_outlined, () => _addToCart(offer)),
-                        SizedBox(width: 4),
-                        _buildSmallIconButton(Icons.favorite_border, () => _addToWishlist(offer)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Content
-            Padding(
-              padding: EdgeInsets.all(10.r),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Product Name with Subproduct in brackets
-                RichText(
-  text: TextSpan(
-    children: [
-      // 🔹 Subproduct లేదా Product
-      TextSpan(
-        text: (offer.subproduct != null && offer.subproduct!.isNotEmpty)
-            ? offer.subproduct!.toUpperCase()
-            : offer.title.toUpperCase(),
-        style: GoogleFonts.inter(
-          fontWeight: FontWeight.w700,
-          fontSize: 11.sp,
-          color: const Color(0xFF2D3748),
-        ),
+ Widget _buildPremiumProductCard(BuildContext context, Offer offer) {
+  return GestureDetector(
+    onTap: () => _navigateToDetailScreen(context, offer),
+    child: Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: Offset(0, 2))
+        ],
       ),
-
-      // 🔹 OriginalPrice ఉంటే మాత్రమే brackets లో చూపించు
-      if (offer.originalPrice != null &&
-          offer.originalPrice!.isNotEmpty)
-        TextSpan(
-          text: ' (${offer.originalPrice!.toUpperCase()})',
-          style: GoogleFonts.inter(
-            fontSize: 10.sp,
-            color: Colors.grey[600],
-          ),
-        ),
-    ],
-  ),
-  maxLines: 2,
-  overflow: TextOverflow.ellipsis,
-),
-
-                  SizedBox(height: 6.h),
-                  
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 🔹 Image Section
+          Container(
+            height: 140.h,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(5)),
+              image: DecorationImage(image: _getImageProvider(offer.imagePath), fit: BoxFit.cover),
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: offer.status?.toUpperCase() == 'ACTIVE' ? Colors.green : Colors.red,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      offer.status?.toUpperCase() == 'ACTIVE' ? 'In Stock' : 'Out of Stock',
+                      style: GoogleFonts.inter(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Row(
                     children: [
-                      if (offer.grossWeight != null) _buildSmallDetailText("Gross: ${offer.grossWeight}"),
-                      if (offer.netWeight != null) _buildSmallDetailText("Net: ${offer.netWeight}"),
-                      if (offer.tagNumber != null) _buildSmallDetailText("Tag: ${offer.tagNumber}"),
-                      if (offer.size != null) _buildSmallDetailText("Size: ${offer.size}"),
+                      _buildSmallIconButton(Icons.shopping_cart_outlined, () => _addToCart(offer)),
+                      SizedBox(width: 4),
+                   _buildIconButton(
+  offer.whish == "yes" ? Icons.favorite : Icons.favorite_border,
+  () async {
+    await addToWishlist(offer);
+
+    setState(() {
+      offer.whish = (offer.whish == "yes") ? "" : "yes";
+    });
+  },
+  size: 18.sp,
+  iconColor: offer.whish == "yes" ? Colors.red : Colors.grey,
+)
+
                     ],
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+
+          // 🔹 Content Section
+          Expanded( // ✅ Prevent overflow
+            child: Padding(
+              padding: EdgeInsets.all(10.r),
+              child: SingleChildScrollView( // ✅ Scroll if content is big
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: (offer.subproduct != null && offer.subproduct!.isNotEmpty)
+                                ? offer.subproduct!.toUpperCase()
+                                : offer.title.toUpperCase(),
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 11.sp,
+                              color: const Color(0xFF2D3748),
+                            ),
+                          ),
+                          if (offer.originalPrice.isNotEmpty)
+                            TextSpan(
+                              text: ' (${offer.originalPrice.toUpperCase()})',
+                              style: GoogleFonts.inter(fontSize: 10.sp, color: Colors.grey[600]),
+                            ),
+                        ],
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 6.h),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (offer.grossWeight != null) _buildSmallDetailText("Gross: ${offer.grossWeight}"),
+                        if (offer.netWeight != null) _buildSmallDetailText("Net: ${offer.netWeight}"),
+                        if (offer.tagNumber != null) _buildSmallDetailText("Tag: ${offer.tagNumber}"),
+                        if (offer.size != null) _buildSmallDetailText("Size: ${offer.size}"),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   // Full Screen Product Card - IMPROVED
   Widget _buildFullScreenProductCard(Offer offer) {
@@ -1012,7 +1441,19 @@ Widget _buildFullScreenView() {
                       children: [
                         _buildIconButton(Icons.shopping_cart_outlined, () => _addToCart(offer), size: 18.sp),
                         SizedBox(width: 8),
-                        _buildIconButton(Icons.favorite_border, () => _addToWishlist(offer), size: 18.sp),
+                     _buildIconButton(
+  offer.whish == "yes" ? Icons.favorite : Icons.favorite_border,
+  () async {
+    await addToWishlist(offer);
+
+    setState(() {
+      offer.whish = (offer.whish == "yes") ? "" : "yes";
+    });
+  },
+  size: 18.sp,
+  iconColor: offer.whish == "yes" ? Colors.red : Colors.grey,
+)
+
                       ],
                     ),
                   ),
@@ -1043,10 +1484,9 @@ Widget _buildFullScreenView() {
       ),
 
       // 🔹 OriginalPrice ఉంటే మాత్రమే brackets లో చూపించు
-      if (offer.originalPrice != null &&
-          offer.originalPrice!.isNotEmpty)
+      if (offer.originalPrice.isNotEmpty)
         TextSpan(
-          text: ' (${offer.originalPrice!.toUpperCase()})',
+          text: ' (${offer.originalPrice.toUpperCase()})',
           style: GoogleFonts.inter(
             fontSize: 12.sp,
             color: Colors.grey[600],
@@ -1082,22 +1522,51 @@ Widget _buildFullScreenView() {
   }
 
   // Helper Widgets
-  Widget _buildIconButton(IconData icon, VoidCallback onTap, {double size = 14}) {
-    return GestureDetector(
-      onTap: onTap,
+Widget _buildIconButton(
+  IconData icon,
+  VoidCallback onTap, {
+  double size = 14,
+  Color iconColor = Colors.grey, // ⭐ new parameter
+}) {
+  return Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: () {
+        print("❤️ FAVORITE PRESSED");
+        onTap();
+      },
+      borderRadius: BorderRadius.circular(50),
       child: Container(
-        width: 32, height: 32,
-        decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4, offset: Offset(0, 2))]),
-        child: Icon(icon, color: AppTheme.primaryColor, size: size),
+        width: 20,
+        height: 20,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            )
+          ],
+        ),
+        child: Icon(
+          icon,
+          color: iconColor,   // ⭐ use dynamic color
+          size: size,
+        ),
       ),
-    );
-  }
+    ),
+  );
+}
+
+
 
   Widget _buildSmallIconButton(IconData icon, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 24, height: 24,
+        width: 20, height: 20,
         decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 2, offset: Offset(0, 1))]),
         child: Icon(icon, color: AppTheme.primaryColor, size: 12),
       ),
@@ -1136,15 +1605,10 @@ Widget _buildFullScreenView() {
     ));
   }
 
-  void _addToWishlist(Offer offer) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Row(children: [
-        Icon(Icons.favorite, color: Colors.white, size: 20), SizedBox(width: 8),
-        Expanded(child: Text("${offer.title} added to wishlist", style: GoogleFonts.inter(color: Colors.white, fontSize: 14))),
-      ]),
-      backgroundColor: Colors.orange, duration: Duration(seconds: 2),
-    ));
-  }
+  
+
+
+ 
 
   ImageProvider<Object> _getImageProvider(String? path) {
     final imagePath = path?.trim() ?? '';
@@ -1158,8 +1622,471 @@ Widget _buildFullScreenView() {
   // Filter Bottom Sheet method would go here...
   void _showFilterBottomSheet(BuildContext context) {
     // Your existing filter bottom sheet code
-  }
+    
+  // New filter state variables
+  double _selectedSize = 5.0;
+  String _selectedDesignType = '';
+
+  final List<String> _designTypes = ['Plain', 'Studded with Stones'];
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return SafeArea(
+        child: StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.9,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: Column(
+                children: [
+                  // Header
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Filters",
+                          style: GoogleFonts.lato(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF2D3748),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: Icon(Icons.close, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Search Bar
+                  Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Container(
+                      height: 50.h,
+                      decoration: BoxDecoration(
+                        color: Color(0xFFF7F7F7),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: "Search categories...",
+                          hintStyle: GoogleFonts.inter(color: Colors.grey, fontSize: 13.h),
+                          prefixIcon: Icon(Icons.search, color: AppTheme.primaryColor),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+                  // Section Title
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Select your favourite categories",
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2D3748),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16.h),
+                  
+                  // Categories List with Checkboxes - 2 columns layout
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Categories Grid
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 8.0,
+                              mainAxisSpacing: 8.0,
+                              childAspectRatio: 3.0,
+                            ),
+                            itemCount: _jewelryCategories.length,
+                            itemBuilder: (context, index) {
+                              final category = _jewelryCategories[index];
+                              final isSelected = _selectedCategories.contains(category);
+                              
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.grey.shade200,
+                                  ),
+                                ),
+                                child: CheckboxListTile(
+                                  title: Text(
+                                    category,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: Color(0xFF2D3748),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  value: isSelected,
+                                  onChanged: (bool? value) {
+                                    setModalState(() {
+                                      if (value == true) {
+                                        _selectedCategories.add(category);
+                                      } else {
+                                        _selectedCategories.remove(category);
+                                      }
+                                    });
+                                  },
+                                  activeColor: AppTheme.primaryColor,
+                                  checkColor: Colors.white,
+                                  controlAffinity: ListTileControlAffinity.leading,
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                                  dense: true,
+                                ),
+                              );
+                            },
+                          ),
+
+                          SizedBox(height: 24.h),
+
+                          // NEW: Weight Range Section
+                          Container(
+                            padding: EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Weight Range (grams)",
+                                  style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF2D3748),
+                                  ),
+                                ),
+                                SizedBox(height: 16.h),
+                                
+                                // Weight Input Fields in Single Row
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        height: 50.h,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.grey.shade300),
+                                        ),
+                                        child: TextField(
+                                          keyboardType: TextInputType.number,
+                                          decoration: InputDecoration(
+                                            labelText: "From",
+                                            labelStyle: GoogleFonts.inter(fontSize: 12.sp),
+                                            border: InputBorder.none,
+                                            contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                                            suffixText: "g",
+                                            suffixStyle: GoogleFonts.inter(
+                                              color: Colors.grey,
+                                              fontSize: 12.sp,
+                                            ),
+                                          ),
+                                          onChanged: (value) {
+                                            setModalState(() {
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(width: 12.w),
+                                    Expanded(
+                                      child: Container(
+                                        height: 50.h,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.grey.shade300),
+                                        ),
+                                        child: TextField(
+                                          keyboardType: TextInputType.number,
+                                          decoration: InputDecoration(
+                                            labelText: "To",
+                                            labelStyle: GoogleFonts.inter(fontSize: 12.sp),
+                                            border: InputBorder.none,
+                                            contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                                            suffixText: "g",
+                                            suffixStyle: GoogleFonts.inter(
+                                              color: Colors.grey,
+                                              fontSize: 12.sp,
+                                            ),
+                                          ),
+                                          onChanged: (value) {
+                                            setModalState(() {
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          SizedBox(height: 20.h),
+
+                          // NEW: Size Slider Section
+                          Container(
+                            padding: EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      "Size",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF2D3748),
+                                      ),
+                                    ),
+                                    Text(
+                                      "${_selectedSize.toStringAsFixed(1)}",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.primaryColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 16.h),
+                                
+                                // Size Slider
+                                Slider(
+                                  value: _selectedSize,
+                                  min: 1.0,
+                                  max: 10.0,
+                                  divisions: 18, // For 0.5 increments
+                                  label: _selectedSize.toStringAsFixed(1),
+                                  activeColor: AppTheme.primaryColor,
+                                  inactiveColor: Colors.grey.shade300,
+                                  onChanged: (value) {
+                                    setModalState(() {
+                                      _selectedSize = value;
+                                    });
+                                  },
+                                ),
+                                
+                                // Size indicators
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      "1",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    Text(
+                                      "10",
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          SizedBox(height: 20.h),
+
+                          // NEW: Design Type Section
+                          Container(
+                            padding: EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Design Type",
+                                  style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF2D3748),
+                                  ),
+                                ),
+                                SizedBox(height: 12.h),
+                                
+                                // Design Type Selection
+                                Row(
+                                  children: _designTypes.map((type) {
+                                    final isSelected = _selectedDesignType == type;
+                                    return Expanded(
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setModalState(() {
+                                            _selectedDesignType = type;
+                                          });
+                                        },
+                                        child: Container(
+                                          margin: EdgeInsets.symmetric(horizontal: 4.w),
+                                          padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 8.w),
+                                          decoration: BoxDecoration(
+                                            color: isSelected ? AppTheme.primaryColor : Colors.white,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: isSelected ? AppTheme.primaryColor : Colors.grey.shade300,
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            type,
+                                            textAlign: TextAlign.center,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12.sp,
+                                              fontWeight: FontWeight.w500,
+                                              color: isSelected ? Colors.white : Color(0xFF2D3748),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          SizedBox(height: 20.h),
+                        ],
+                      ),
+                    ),
+                  ),
+                  
+                  // Bottom Actions
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setModalState(() {
+                                _selectedCategories.clear();
+                                _selectedSize = 5.0;
+                                _selectedDesignType = '';
+                              });
+                            },
+                            style: OutlinedButton.styleFrom(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              side: BorderSide(color: AppTheme.primaryColor),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              "Clear All",
+                              style: GoogleFonts.inter(
+                                color: AppTheme.primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              // Apply all filters
+                              setState(() {
+                                // You can store these filter values in your main state
+                                // and use them to filter your jewelry items
+                              });
+                              Navigator.pop(context);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              "Apply Filters",
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    },
+  );
 }
+  }
+
 
 class LayoutOption {
   final int id;

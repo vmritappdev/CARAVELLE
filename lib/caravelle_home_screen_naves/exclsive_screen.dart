@@ -81,18 +81,21 @@ class _ExclusiveDesignsSectionState extends State<ExclusiveDesignsSection> {
               Padding(
                 padding: EdgeInsets.only(right: 18.0.r),
                 child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const GoldShopOffersScreen(
-                          mainCategory: "Exclusive Designs",
-                          subCategory: "All Designs",
-                          subProducts: '',
-                        ),
-                      ),
-                    );
-                  },
+                 onTap: () {
+  print("🟢 VIEW ALL clicked — Opening Best Sellers Screen");
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const GoldShopOffersScreen(
+        mainCategory: "Exclusive Designs",
+        subCategory: "All Designs",
+        subProducts: '',
+        fetchApiType: 'bestSeller',   // ✔ Correct String
+      ),
+    ),
+  );
+},
+
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     decoration: BoxDecoration(

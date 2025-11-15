@@ -1,3 +1,4 @@
+import 'package:caravelle/dashboard_naves/goldshop_offer.dart';
 import 'package:caravelle/uittility/app_theme.dart';
 import 'package:caravelle/uittility/conasthan_api.dart';
 import 'package:flutter/material.dart';
@@ -23,7 +24,7 @@ class _ProductGalleryWidgetState extends State<ProductGalleryWidget> {
 
   Future<void> fetchProducts() async {
   final url = Uri.parse('$baseUrl/catalogue_products.php');
-  
+
   try {
     print("🔹 API CALL STARTED");
     print("🌐 URL: $url");
@@ -37,6 +38,8 @@ class _ProductGalleryWidgetState extends State<ProductGalleryWidget> {
 
     print("📩 STATUS CODE: ${response.statusCode}");
     print("📜 RAW RESPONSE: ${response.body}");
+
+    if (!mounted) return; // 💥 Widget destroyed? stop setState.
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
@@ -58,9 +61,13 @@ class _ProductGalleryWidgetState extends State<ProductGalleryWidget> {
     }
   } catch (e) {
     print("🔥 ERROR while fetching products: $e");
+
+    if (!mounted) return; // 💥 Safe check
+
     setState(() => _isLoading = false);
   }
 }
+
 
   @override
   Widget build(BuildContext context) {
@@ -151,44 +158,61 @@ class _ProductGalleryWidgetState extends State<ProductGalleryWidget> {
             ),
             const SizedBox(height: 12),
             // 🔹 View Catalogue Button
-            Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppTheme.primaryColor, AppTheme.primaryColor],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryColor,
-                    //  blurRadius: 6,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Text(
-                      "View Catalogue",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(width: 5),
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      size: 15,
-                      color: Colors.white,
-                    ),
-                  ],
-                ),
-              )
-             
+          InkWell(
+  onTap: () {
+    // 🔹 Functionality ekkada handle cheyyali
+    print("🟢 View Catalogue clicked");
+    
+    // Example: Navigate to GoldShopOffersScreen with catalogueProducts API
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => GoldShopOffersScreen(
+          fetchApiType: "catalogueProducts",
+          subProducts: '',
+        ),
+      ),
+    );
+  },
+  borderRadius: BorderRadius.circular(10),
+  child: Container(
+    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [AppTheme.primaryColor, AppTheme.primaryColor],
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+      ),
+      borderRadius: BorderRadius.circular(10),
+      boxShadow: [
+        BoxShadow(
+          color: AppTheme.primaryColor,
+          offset: const Offset(0, 3),
+        ),
+      ],
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: const [
+        Text(
+          "View Catalogue",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(width: 5),
+        Icon(
+          Icons.arrow_forward_ios,
+          size: 15,
+          color: Colors.white,
+        ),
+      ],
+    ),
+  ),
+),
+
           ],
         ),
       ),
