@@ -7,7 +7,7 @@ import 'package:caravelle/uittility/conasthan_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -300,7 +300,7 @@ Future<void> _authenticateUser() async {
                   )
                 : Text(
                     label,
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(
                       fontSize: 20.sp, // Smaller font
                       fontWeight: FontWeight.w500,
                       color: isTransparent ? Colors.transparent : textOnLight,
@@ -381,7 +381,7 @@ Future<void> _authenticateUser() async {
                       // Compact Title Section
                       Text(
                         "Secure Login",
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(
                           fontSize: 20.sp, // Smaller title
                           fontWeight: FontWeight.bold,
                           color: textOnTeal,
@@ -390,7 +390,7 @@ Future<void> _authenticateUser() async {
                       const SizedBox(height: 6),
                       Text(
                         "Enter your 4-digit MPIN", // Shorter text
-                        style: GoogleFonts.roboto(
+                        style: TextStyle(
                           fontSize: 14.sp, // Smaller font
                           color: Colors.white70,
                         ),
@@ -400,7 +400,7 @@ Future<void> _authenticateUser() async {
                           padding: const EdgeInsets.only(top: 3.0),
                           child: Text(
                             "for Mobile: **** ${ _mobileNumber!.length > 4 ? _mobileNumber!.substring(_mobileNumber!.length - 4) : _mobileNumber!}",
-                            style: GoogleFonts.roboto(
+                            style: TextStyle(
                               fontSize: 12.sp, // Smaller font
                               color: Colors.white70,
                             ),
@@ -417,7 +417,7 @@ Future<void> _authenticateUser() async {
                       // Forgot MPIN & Biometric Section in Row
                      Text(
                                 "Forgot MPIN?",
-                                style: GoogleFonts.roboto(
+                                style: TextStyle(
                                   fontSize: 14.h, // Smaller font
                                   color: backgroundLight,
                                   fontWeight: FontWeight.w600,

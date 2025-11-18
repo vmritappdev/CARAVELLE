@@ -12,6 +12,7 @@ class Offer {
 final String? subproduct;
 
  String? whish;
+ String? cart;
   // New fields for jewelry details
   final String? tagNumber;
   final String? stoneType;
@@ -28,6 +29,7 @@ final String? subproduct;
     required this.discountedPrice,
     required this.description,
      this.whish,
+     this.cart,
     
     this.grossWeight,
     this.netWeight,
@@ -68,7 +70,8 @@ final String? subproduct;
         originalPrice: json['originalPrice'],
         discountedPrice: json['discountedPrice'],
 
-         whish: json['whislist']?.toString() ?? "",
+        whish: (json['whislist'] ?? "").toString().toUpperCase(),
+        cart: (json['cart'] ?? "").toString().toUpperCase(),
         
         description: json['description'],
         grossWeight: json['grossWeight'],

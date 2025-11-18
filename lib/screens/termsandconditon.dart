@@ -3,7 +3,7 @@ import 'package:caravelle/screens/login_screen.dart';
 import 'package:caravelle/uittility/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TermsAndConditionsScreen extends StatefulWidget {
@@ -92,7 +92,7 @@ class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
               children: [
                 Text(
                   "Terms & Conditions",
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
@@ -100,7 +100,7 @@ class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
                 ),
                 Text(
                   "Review before proceeding",
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(
                     color: Colors.white.withOpacity(0.8),
                     fontSize: 12,
                   ),
@@ -134,7 +134,7 @@ class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
                 Expanded(
                   child: Text(
                     "Explore our wide range of jewellery products by accepting the Terms & Conditions.",
-                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87, height: 1.4),
+                    style: TextStyle(fontSize: 12, color: Colors.black87, height: 1.4),
                   ),
                 ),
               ],
@@ -191,7 +191,7 @@ class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
             child: Center(
               child: Text(
                 "$number",
-                style: GoogleFonts.poppins(
+                style: TextStyle(
                   color: Colors.white,
                   fontSize: 10,
                   fontWeight: FontWeight.w600,
@@ -203,7 +203,7 @@ class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.poppins(fontSize: 11, color: Colors.black87, height: 1.4),
+              style: TextStyle(fontSize: 11, color: Colors.black87, height: 1.4),
             ),
           ),
         ],
@@ -237,7 +237,7 @@ class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
               Expanded(
                 child: Text(
                   "I agree to the Terms & Conditions",
-                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w500),
+                  style: TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w500),
                 ),
               ),
             ],
@@ -259,16 +259,16 @@ class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.r)),
                         content: Text(
                           "You must accept Terms & Conditions to enter the app.",
-                          style: GoogleFonts.poppins(fontSize: 14.sp),
+                          style: TextStyle(fontSize: 14.sp),
                         ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: Text("No", style: GoogleFonts.poppins(color: Colors.grey[700], fontWeight: FontWeight.w500)),
+                            child: Text("No", style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w500)),
                           ),
                           TextButton(
                             onPressed: () => exit(0),
-                            child: Text("Yes", style: GoogleFonts.poppins(color: AppTheme.primaryColor, fontWeight: FontWeight.w600)),
+                            child: Text("Yes", style: TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w600)),
                           ),
                         ],
                       );
@@ -281,7 +281,7 @@ class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
                   elevation: 0,
                 ),
-                child: Text("Decline", style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14.sp)),
+                child: Text("Decline", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14.sp)),
               ),
             ),
             SizedBox(
@@ -300,7 +300,7 @@ class _TermsAndConditionsScreenState extends State<TermsAndConditionsScreen> {
                         width: 20.w,
                         child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                       )
-                    : Text("Continue", style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14.sp, color: Colors.white)),
+                    : Text("Continue", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14.sp, color: Colors.white)),
               ),
             ),
           ],

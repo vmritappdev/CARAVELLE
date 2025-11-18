@@ -17,44 +17,56 @@ class _ExclusiveDesignsSectionState extends State<ExclusiveDesignsSection> {
   List<dynamic> bestSellers = [];
   bool isLoading = true;
 
-  @override
-  void initState() {
-    super.initState();
-    fetchBestSellerData();
-  }
 
-  Future<void> fetchBestSellerData() async {
-    final url = Uri.parse("https://caravelle.in/barcode/app/best_seller.php");
+  void printFullJson(dynamic data) {
+  const JsonEncoder encoder = JsonEncoder.withIndent('  ');
+  final String pretty = encoder.convert(data);
+  pretty.split('\n').forEach((line) => debugPrint(line));
+}
 
-    try {
-      final response = await http.post(url, body: {"token": token});
+@override
+void initState() {
+  super.initState();
+  fetchBestSellerData();
+}
 
-      print("🔹 API URL: $url");
-      print("🔹 Sent Token: $token");
-      print("🔹 Status Code: ${response.statusCode}");
-      print("✅ Full Response: ${response.body}");
+Future<void> fetchBestSellerData() async {
+  final url = Uri.parse("${baseUrl}best_seller.php");
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+  try {
+    final response = await http.post(url, body: {"token": token});
 
-        if (data["response"] == "success" && data["total_data"] != null) {
-          setState(() {
-            bestSellers = data["total_data"].take(4).toList(); // ✅ Only 4 items
-            isLoading = false;
-          });
-        } else {
-          print("⚠️ No Data Found");
-          setState(() => isLoading = false);
-        }
+    print("🔹 API URL: $url");
+    print("🔹 Sent Token: $token");
+    print("🔹 Status Code: ${response.statusCode}");
+
+    /// 🔥 HERE — Print full JSON without truncation
+    print("🔵 Full Raw Response (Pretty JSON):");
+    final decoded = json.decode(response.body);
+    printFullJson(decoded);
+
+    if (response.statusCode == 200) {
+      final data = decoded;
+
+      if (data["response"] == "success" && data["total_data"] != null) {
+        setState(() {
+          bestSellers = data["total_data"].take(4).toList(); // Only 4 items
+          
+          isLoading = false;
+        });
       } else {
-        print("❌ Server Error: ${response.statusCode}");
+        print("⚠️ No Data Found");
         setState(() => isLoading = false);
       }
-    } catch (e) {
-      print("⚠️ Exception: $e");
+    } else {
+      print("❌ Server Error: ${response.statusCode}");
       setState(() => isLoading = false);
     }
+  } catch (e) {
+    print("⚠️ Exception: $e");
+    setState(() => isLoading = false);
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -171,6 +183,7 @@ class _ExclusiveDesignsSectionState extends State<ExclusiveDesignsSection> {
                           final subProduct = item["sub_product"];
                           final product = item["product"];
                           final design = item["design"];
+                          
 
                           final titleText =
                               (subProduct != null && subProduct.toString().isNotEmpty)

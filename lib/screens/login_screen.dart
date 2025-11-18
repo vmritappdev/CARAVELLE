@@ -9,7 +9,7 @@ import 'package:caravelle/uittility/app_theme.dart';
 import 'package:caravelle/uittility/conasthan_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -224,7 +224,7 @@ Future<void> _verifyMpin() async {
                 // Welcome Text
                 Text(
                   "Welcome Back!",
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(
                     fontSize: AppTheme.headerSize,
                     fontWeight: FontWeight.w700,
                     color: Colors.grey[900],
@@ -236,7 +236,7 @@ Future<void> _verifyMpin() async {
                 
                 Text(
                   "Login to access your account",
-                  style: GoogleFonts.poppins(
+                  style: TextStyle(
                     fontSize: AppTheme.subHeaderSize,
                     color: Colors.grey[600],
                     fontWeight: FontWeight.w400,
@@ -262,7 +262,7 @@ Future<void> _verifyMpin() async {
                     controller: _mobileController,
                     maxLength: 10,
                     keyboardType: TextInputType.phone,
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(
                       fontSize: AppTheme.fontSize,
                       color: Colors.grey[800],
                     ),
@@ -271,7 +271,7 @@ Future<void> _verifyMpin() async {
                       fillColor: Colors.white,
                       counterText: '',
                       hintText: "Mobile Number",
-                      hintStyle: GoogleFonts.poppins(
+                      hintStyle: TextStyle(
                         color: Colors.grey[500],
                       ),
                       prefixIcon: Container(
@@ -340,7 +340,7 @@ Future<void> _verifyMpin() async {
                     controller: _mpinController,
                     keyboardType: TextInputType.number,
                     obscureText: _obscureMpin,
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(
                       fontSize: AppTheme.fontSize,
                       color: Colors.grey[800],
                     ),
@@ -349,7 +349,7 @@ Future<void> _verifyMpin() async {
                       fillColor: Colors.white,
                       hintText: "MPIN",
                       counterText: '',
-                      hintStyle: GoogleFonts.poppins(
+                      hintStyle: TextStyle(
                       color: Colors.grey[500],
                       ),
                       prefixIcon: Container(
@@ -432,7 +432,7 @@ Future<void> _verifyMpin() async {
                     ),
                     child: Text(
                       "Forgot MPIN?",
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(
                         color: AppTheme.primaryColor,
                         fontWeight: FontWeight.w600,
                         fontSize: 14.sp,
@@ -483,7 +483,7 @@ Future<void> _verifyMpin() async {
                           )
                         : Text(
                             "Login",
-                            style: GoogleFonts.poppins(
+                            style: TextStyle(
                               fontSize: 18.sp,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.5,
@@ -507,7 +507,7 @@ Future<void> _verifyMpin() async {
                       padding: EdgeInsets.symmetric(horizontal: 16.r),
                       child: Text(
                         "or",
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(
                           color: Colors.grey[500],
                           fontSize: 14.sp,
                         ),
@@ -564,7 +564,7 @@ Future<void> _verifyMpin() async {
                     ),
                     child: Text(
                       "Login with OTP",
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(
                         fontSize: 18.sp,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.5,
@@ -581,7 +581,7 @@ Future<void> _verifyMpin() async {
                   children: [
                     Text(
                       "Create an account here ",
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(
                         color: Colors.grey[600],
                         fontSize: 15.sp,
                       ),
@@ -599,7 +599,7 @@ Future<void> _verifyMpin() async {
                   },
                   child: Text(
                     "Register Here",
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(
                       color: AppTheme.primaryColor,
                       fontWeight: FontWeight.bold,
                       fontSize: 15.sp,

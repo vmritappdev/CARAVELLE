@@ -4,7 +4,7 @@ import 'package:caravelle/uittility/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen2 extends StatefulWidget {
@@ -63,8 +63,8 @@ class _SplashScreen2State extends State<SplashScreen2> {
             SizedBox(height: 10.h),
             Text(
               'CARAVELLE',
-              style: GoogleFonts.lato(
-                textStyle: TextStyle(
+              style: 
+                 TextStyle(
                 fontSize: AppTheme.logoSize,
                // fontStyle: FontStyle.italic,
                 fontWeight: FontWeight.bold,
@@ -72,7 +72,7 @@ class _SplashScreen2State extends State<SplashScreen2> {
                 letterSpacing: 3,
               ),
               ),
-            ),
+            
             SizedBox(height: 5.h),
            Text(
   'Gold | CZ | Lab Diamonds',

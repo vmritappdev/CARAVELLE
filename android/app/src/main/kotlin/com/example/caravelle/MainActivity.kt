@@ -1,4 +1,4 @@
-package com.example.caravelle
+package com.vmrit.caravelle 
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

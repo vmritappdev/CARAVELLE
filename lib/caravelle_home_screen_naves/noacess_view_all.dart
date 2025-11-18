@@ -4,7 +4,7 @@ import 'package:caravelle/model/product_model.dart';
 import 'package:caravelle/uittility/conasthan_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:http/http.dart' as http;
 
 class ViewAllProductsScreen extends StatefulWidget {
@@ -104,7 +104,7 @@ class _ViewAllProductsScreenState extends State<ViewAllProductsScreen> {
                 // Product Name
                 Text(
                   _getFullName(product),
-                  style: GoogleFonts.roboto(
+                  style: TextStyle(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.black87,
@@ -161,7 +161,7 @@ class _ViewAllProductsScreenState extends State<ViewAllProductsScreen> {
                     ),
                     child: Text(
                       "Close",
-                      style: GoogleFonts.roboto(
+                      style: TextStyle(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w600,
                       ),
@@ -184,7 +184,7 @@ class _ViewAllProductsScreenState extends State<ViewAllProductsScreen> {
           flex: 4,
           child: Text(
             label,
-            style: GoogleFonts.roboto(
+            style: TextStyle(
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: Colors.grey.shade700,
@@ -195,7 +195,7 @@ class _ViewAllProductsScreenState extends State<ViewAllProductsScreen> {
           flex: 6,
           child: Text(
             value,
-            style: GoogleFonts.roboto(
+            style: TextStyle(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
               color: Colors.black87,
@@ -251,7 +251,7 @@ class _ViewAllProductsScreenState extends State<ViewAllProductsScreen> {
           SizedBox(width: 12.w),
           Text(
             "All Products",
-            style: GoogleFonts.roboto(
+            style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
               color: Colors.black,
@@ -260,7 +260,7 @@ class _ViewAllProductsScreenState extends State<ViewAllProductsScreen> {
           const Spacer(),
           Text(
             "${products.length} items",
-            style: GoogleFonts.roboto(
+            style: TextStyle(
               fontSize: 14.sp,
               color: Colors.grey.shade600,
             ),
@@ -362,7 +362,7 @@ class _ViewAllProductsScreenState extends State<ViewAllProductsScreen> {
                 children: [
                   Text(
                     _getShortName(product),
-                    style: GoogleFonts.roboto(
+                    style: TextStyle(
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w500,
                     ),
@@ -438,7 +438,7 @@ class _ViewAllProductsScreenState extends State<ViewAllProductsScreen> {
                   children: [
                     Text(
                       _getShortName(product),
-                      style: GoogleFonts.roboto(
+                      style: TextStyle(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w500,
                       ),
@@ -457,7 +457,7 @@ class _ViewAllProductsScreenState extends State<ViewAllProductsScreen> {
                     SizedBox(height: 4.h),
                     Text(
                       "Tag: ${product.tagno}",
-                      style: GoogleFonts.roboto(
+                      style: TextStyle(
                         fontSize: 11.sp,
                         color: Colors.grey.shade600,
                       ),
@@ -491,7 +491,7 @@ class _ViewAllProductsScreenState extends State<ViewAllProductsScreen> {
       ),
       child: Text(
         isInStock ? "In Stock" : "Out of Stock",
-        style: GoogleFonts.roboto(
+        style: TextStyle(
           fontSize: 10.sp,
           fontWeight: FontWeight.w600,
           color: Colors.white,
@@ -507,14 +507,14 @@ class _ViewAllProductsScreenState extends State<ViewAllProductsScreen> {
         children: [
           Text(
             "$label: ",
-            style: GoogleFonts.roboto(
+            style: TextStyle(
               fontSize: 10.sp,
               color: Colors.grey.shade600,
             ),
           ),
           Text(
             value,
-            style: GoogleFonts.roboto(
+            style: TextStyle(
               fontSize: 10.sp,
               fontWeight: FontWeight.w500,
             ),
@@ -533,7 +533,7 @@ class _ViewAllProductsScreenState extends State<ViewAllProductsScreen> {
       ),
       child: Text(
         text,
-        style: GoogleFonts.roboto(
+        style: TextStyle(
           fontSize: 10.sp,
           color: Colors.grey.shade700,
         ),

@@ -3,7 +3,7 @@ import 'package:android_intent_plus/flag.dart';
 import 'package:caravelle/uittility/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 
 class FAQScreen extends StatelessWidget {
@@ -82,7 +82,7 @@ Widget build(BuildContext context) {
         backgroundColor: AppTheme.primaryColor,
         title: Text(
           "FAQs",
-          style: GoogleFonts.roboto(
+          style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: AppTheme.headerSize.sp,
             color: Colors.white,
@@ -158,7 +158,7 @@ Widget build(BuildContext context) {
           childrenPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
           title: Text(
             question,
-            style: GoogleFonts.lato(
+            style: TextStyle(
               fontSize: AppTheme.subHeaderSize.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF2C2C2C),
@@ -171,7 +171,7 @@ Widget build(BuildContext context) {
             SizedBox(height: 6.h),
             Text(
               answer,
-              style: GoogleFonts.roboto(
+              style: TextStyle(
                 fontSize: 14.sp,
                 color: Colors.grey.shade700,
                 height: 1.5,

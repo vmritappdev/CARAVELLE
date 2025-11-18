@@ -10,7 +10,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
@@ -324,7 +324,7 @@ Future<void> fetchExtendRequestButton(BuildContext context) async {
             children: [
               Text(
                 "CARAVELLE",
-                style: GoogleFonts.italiana(
+                style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
                   fontSize: 22.sp,
@@ -334,7 +334,7 @@ Future<void> fetchExtendRequestButton(BuildContext context) async {
               SizedBox(height: 2.h),
               Text(
                 'Gold | CZ | Lab Diamonds',
-                style: GoogleFonts.roboto(
+                style: TextStyle(
                   fontSize: 10.sp,
                   color: Colors.amber.shade200,
                   fontWeight: FontWeight.w500,
@@ -552,7 +552,7 @@ Widget _buildAccessMessage() {
         SizedBox(height: 12.h),
         Text(
           "⏳ Access Pending",
-          style: GoogleFonts.inter(
+          style: TextStyle(
             fontSize: 18.sp,
             color: Colors.blue.shade800,
             fontWeight: FontWeight.w700,
@@ -562,7 +562,7 @@ Widget _buildAccessMessage() {
         SizedBox(height: 8.h),
         Text(
           "You don't have admin access yet. It will be granted within 24–48 hours. Once approved, you'll be able to view the full collection.",
-          style: GoogleFonts.inter(
+          style: TextStyle(
             fontSize: 14.sp,
             color: Colors.grey.shade700,
             fontWeight: FontWeight.w500,
@@ -598,7 +598,7 @@ Center(
               Flexible(
                 child: Text(
                   _apiMessage!,
-                  style: GoogleFonts.inter(
+                  style: TextStyle(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.teal.shade800,
@@ -617,7 +617,7 @@ Center(
           icon: Icon(Icons.person_add_alt_1, color: Colors.white, size: 20.sp),
           label: Text(
             "Request Access",
-            style: GoogleFonts.inter(
+            style: TextStyle(
               fontSize: 15.sp,
               fontWeight: FontWeight.w600,
               color: Colors.white,
@@ -638,7 +638,7 @@ Center(
         SizedBox(height: 12.h),
         Text(
           "🙏 Thank you for your patience!",
-          style: GoogleFonts.inter(
+          style: TextStyle(
             fontSize: 14.sp,
             color: Colors.teal.shade700,
             fontWeight: FontWeight.w600,
@@ -671,7 +671,7 @@ Center(
                   children: [
                     Text(
                       "✨Basic Design",
-                      style: GoogleFonts.roboto(
+                      style: TextStyle(
                         fontSize: 18.sp,
                         fontWeight: FontWeight.w700,
                         color: Colors.black87,
@@ -680,7 +680,7 @@ Center(
                     SizedBox(height: 2.h),
                     Text(
                       "Explore our collection",
-                      style: GoogleFonts.roboto(
+                      style: TextStyle(
                         fontSize: 12.sp,
                         color: Colors.grey.shade600,
                       ),
@@ -843,7 +843,7 @@ Widget _buildProductCard(String imageUrl, String name, String design) {
             Flexible(
               child: Text(
                 name,
-                style: GoogleFonts.roboto(
+                style: TextStyle(
                   fontSize: 12.sp,
                   fontWeight: FontWeight.w600,
                   color: Colors.black87,
@@ -855,7 +855,7 @@ Widget _buildProductCard(String imageUrl, String name, String design) {
               SizedBox(width: 4.w),
               Text(
                 design,
-                style: GoogleFonts.roboto(
+                style: TextStyle(
                   fontSize: 11.sp,
                   color: Colors.grey.shade600,
                 ),

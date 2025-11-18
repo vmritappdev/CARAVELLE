@@ -1,7 +1,7 @@
 import 'package:caravelle/uittility/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 
 class EditCompanyScreen extends StatefulWidget {
   const EditCompanyScreen({super.key});
@@ -39,7 +39,7 @@ class _EditCompanyScreenState extends State<EditCompanyScreen> {
         appBar: AppBar(
           title: Text(
             "Edit Company",
-            style: GoogleFonts.poppins(
+            style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 18.sp,
               color: Colors.white,
@@ -114,7 +114,7 @@ class _EditCompanyScreenState extends State<EditCompanyScreen> {
         SizedBox(width: 12.w),
         Text(
           "Company Information",
-          style: GoogleFonts.poppins(
+          style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w700,
             color: Colors.black87,
@@ -137,7 +137,7 @@ class _EditCompanyScreenState extends State<EditCompanyScreen> {
       controller: controller,
       keyboardType: keyboardType,
       maxLength: maxLength,
-      style: GoogleFonts.poppins(fontSize: 14.sp),
+      style: TextStyle(fontSize: 14.sp),
       decoration: InputDecoration(
         counterText: "",
         labelText: label,
@@ -178,13 +178,13 @@ class _EditCompanyScreenState extends State<EditCompanyScreen> {
             borderSide: BorderSide(color: Colors.teal.shade600, width: 1.5),
           ),
         ),
-        style: GoogleFonts.poppins(fontSize: 14.sp, color: Colors.black87),
-        hint: Text("Select $label", style: GoogleFonts.poppins(fontSize: 14.sp, color: Colors.grey.shade500)),
+        style: TextStyle(fontSize: 14.sp, color: Colors.black87),
+        hint: Text("Select $label", style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade500)),
         isExpanded: true,
         onChanged: onChanged,
         items: items.map((e) => DropdownMenuItem(
           value: e,
-          child: Text(e, style: GoogleFonts.poppins(fontSize: 14.sp)),
+          child: Text(e, style: TextStyle(fontSize: 14.sp)),
         )).toList(),
       ),
     );
@@ -211,7 +211,7 @@ class _EditCompanyScreenState extends State<EditCompanyScreen> {
             SizedBox(width: 8.w),
             Text(
               "Save Details",
-              style: GoogleFonts.poppins(
+              style: TextStyle(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
@@ -227,7 +227,7 @@ class _EditCompanyScreenState extends State<EditCompanyScreen> {
     // Save logic, validation, API call etc.
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text("Company details saved successfully!", style: GoogleFonts.poppins()),
+        content: Text("Company details saved successfully!",  ),
         backgroundColor: Colors.green.shade600,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),

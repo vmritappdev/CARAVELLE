@@ -8,7 +8,7 @@ import 'package:caravelle/screens/custmaization_screen.dart' hide CartScreen;
 import 'package:caravelle/uittility/app_theme.dart';
 import 'package:caravelle/uittility/conasthan_api.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:http/http.dart' as http;
 
 class JewelryDetailScreen extends StatefulWidget {
@@ -159,19 +159,19 @@ class _JewelryDetailScreenState extends State<JewelryDetailScreen> {
       builder: (context) => AlertDialog(
         title: Text(
           "Stone Information",
-          style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         content: Text(
           "This jewelry features ${widget.offer.stoneType ?? 'precious stones'}. "
           "The stones are carefully selected for their quality and brilliance.",
-          style: GoogleFonts.inter(fontSize: 14),
+          style: TextStyle(fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
               "OK",
-              style: GoogleFonts.inter(fontSize: 14),
+              style: TextStyle(fontSize: 14),
             ),
           ),
         ],
@@ -210,7 +210,7 @@ class _JewelryDetailScreenState extends State<JewelryDetailScreen> {
                               SizedBox(height: 12),
                               Text(
                                 "Loading product details...",
-                                style: GoogleFonts.inter(
+                                style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.grey[600],
                                 ),
@@ -233,7 +233,7 @@ class _JewelryDetailScreenState extends State<JewelryDetailScreen> {
                               SizedBox(height: 8),
                               Text(
                                 "Oops!",
-                                style: GoogleFonts.inter(
+                                style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.grey[800],
@@ -242,7 +242,7 @@ class _JewelryDetailScreenState extends State<JewelryDetailScreen> {
                              SizedBox(height: 4),
 Text(
   _errorMessage!,
-  style: GoogleFonts.inter(
+  style: TextStyle(
     fontSize: 13,
     color: Colors.grey[600],
   ),
@@ -257,7 +257,7 @@ Text(
                                 ),
                                 child: Text(
                                   "Try Again",
-                                  style: GoogleFonts.inter(
+                                  style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -313,7 +313,7 @@ Text(
                         children: [
                           Text(
                             getDisplayProductName(),
-                            style: GoogleFonts.playfairDisplay(
+                            style: TextStyle(
                               fontSize: 20, // Reduced from 24
                               fontWeight: FontWeight.w700,
                               color: Color(0xFF2D3748),
@@ -329,7 +329,7 @@ Text(
                                 Flexible(
                                   child: Text(
                                     widget.offer.originalPrice,
-                                    style: GoogleFonts.inter(
+                                    style: TextStyle(
                                       color: Color(0xFFA0AEC0),
                                       fontSize: 14, // Reduced from 16
                                       decoration: TextDecoration.lineThrough,
@@ -343,7 +343,7 @@ Text(
                                   widget.offer.discountedPrice.isNotEmpty
                                       ? widget.offer.discountedPrice
                                       : widget.offer.originalPrice,
-                                  style: GoogleFonts.inter(
+                                  style: TextStyle(
                                     color: AppTheme.primaryColor,
                                     fontSize: 18, // Reduced from 20
                                     fontWeight: FontWeight.w700,
@@ -381,7 +381,7 @@ Text(
                                 children: [
                                   Text(
                                     "Product Specifications",
-                                    style: GoogleFonts.inter(
+                                    style: TextStyle(
                                       fontSize: 15, // Reduced from 16
                                       fontWeight: FontWeight.w600,
                                       color: Color(0xFF2D3748),
@@ -441,7 +441,7 @@ Text(
                           ),
                           child: Text(
                             "Customize This Design",
-                            style: GoogleFonts.inter(
+                            style: TextStyle(
                               color: AppTheme.primaryColor,
                               fontSize: 14, // Reduced from 16
                               fontWeight: FontWeight.w600,
@@ -489,7 +489,7 @@ Text(
                     SizedBox(width: 12),
                     Text(
                       "Product Details",
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 16, // Reduced from 18
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF2D3748),
@@ -580,7 +580,7 @@ Text(
                     ),
                     child: Text(
                       "Add to Cart",
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         color: Colors.white,
                         fontSize: 14, // Reduced from 16
                         fontWeight: FontWeight.w600,
@@ -605,7 +605,7 @@ Text(
           Flexible(
             child: Text(
               title,
-              style: GoogleFonts.inter(
+              style: TextStyle(
                 fontSize: 13, // Reduced from 14
                 color: Color(0xFF718096),
                 fontWeight: FontWeight.w500,
@@ -617,7 +617,7 @@ Text(
           Flexible(
             child: Text(
               value,
-              style: GoogleFonts.inter(
+              style: TextStyle(
                 fontSize: 13, // Reduced from 14
                 color: Color(0xFF2D3748),
                 fontWeight: FontWeight.w600,
@@ -643,7 +643,7 @@ Text(
                 Flexible(
                   child: Text(
                     "Stone Type",
-                    style: GoogleFonts.inter(
+                    style: TextStyle(
                       fontSize: 13,
                       color: Color(0xFF718096),
                       fontWeight: FontWeight.w500,
@@ -667,7 +667,7 @@ Text(
           Flexible(
             child: Text(
               widget.offer.stoneType ?? "N/A",
-              style: GoogleFonts.inter(
+              style: TextStyle(
                 fontSize: 13,
                 color: Color(0xFF2D3748),
                 fontWeight: FontWeight.w600,

@@ -23,7 +23,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:http/http.dart' as http;
 
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
@@ -560,7 +560,7 @@ Future<List<dynamic>> fetchNewArrivals() async {
                           children: [
                          Text(
   "CARAVELLE",
-  style: GoogleFonts.lato(
+  style: TextStyle(
     color: Colors.white,
     fontSize: 20.sp, // Slightly bigger for logo feel
     fontWeight: FontWeight.w800, // Extra bold

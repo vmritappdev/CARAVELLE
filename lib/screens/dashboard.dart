@@ -4,7 +4,7 @@ import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:caravelle/uittility/app_theme.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
@@ -202,7 +202,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         child: TextField(
                           decoration: InputDecoration(
                             hintText: "Search jewelry, diamonds, ...",
-                            hintStyle: GoogleFonts.poppins(
+                            hintStyle: TextStyle(
                               color: Colors.grey[500],
                               fontSize: AppTheme.subHeaderSize,
                             ),
@@ -210,7 +210,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             isDense: true,
                             contentPadding: EdgeInsets.zero,
                           ),
-                          style: GoogleFonts.poppins(
+                          style: TextStyle(
                             fontSize: 14.sp,
                             color: Colors.grey[700],
                           ),
@@ -271,7 +271,7 @@ Padding(
       children: [
         Text(
           "⏳ Expiring In",
-          style: GoogleFonts.poppins(
+          style: TextStyle(
             fontSize: AppTheme.subHeaderSize,
             fontWeight: FontWeight.w700,
             color: Colors.black87,
@@ -504,7 +504,7 @@ Padding(
                           children: [
                             Text(
                               "Latest Designs",
-                              style: GoogleFonts.poppins(
+                              style: TextStyle(
                                 color: Colors.grey[800],
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.w700,
@@ -513,7 +513,7 @@ Padding(
                             SizedBox(height: 6.h),
                             Text(
                               "Discover our newest collection of exquisite jewelry pieces",
-                              style: GoogleFonts.poppins(
+                              style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 11.sp,
                               ),
@@ -571,7 +571,7 @@ Padding(
                           children: [
                             Text(
                               "Latest Designs",
-                              style: GoogleFonts.poppins(
+                              style: TextStyle(
                                 color: Colors.grey[800],
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.w700,
@@ -580,7 +580,7 @@ Padding(
                             SizedBox(height: 6.h),
                             Text(
                               "Discover our newest collection of exquisite jewelry pieces",
-                              style: GoogleFonts.poppins(
+                              style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 11.sp,
                               ),
@@ -631,7 +631,7 @@ Padding(
                       SizedBox(height: 10.h),
                       Text(
                         "Limited Edition Pieces",
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(
                           color: Colors.grey[800],
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w700,
@@ -641,7 +641,7 @@ Padding(
                       Text(
                         "Handcrafted designs available only at Caravelle",
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
+                        style: TextStyle(
                           color: Colors.grey[600],
                           fontSize: 11.sp,
                         ),
@@ -689,7 +689,7 @@ Padding(
         child: Center(
           child: Text(
             time.toString().padLeft(2, '0'),
-            style: GoogleFonts.poppins(
+            style: TextStyle(
               color: const Color(0xFFD4AF37),
               fontSize: 16.sp,
               fontWeight: FontWeight.bold,
@@ -701,7 +701,7 @@ Padding(
       // Label below the time box
       Text(
         label,
-        style: GoogleFonts.poppins(
+        style: TextStyle(
           color: Colors.black87,
           fontSize: AppTheme.fontSize,
           fontWeight: FontWeight.w600,
@@ -718,7 +718,7 @@ Padding(
       children: [
         Text(
           title,
-          style: GoogleFonts.poppins(
+          style: TextStyle(
             color: Colors.grey[800],
             fontSize: 16.sp,
             fontWeight: FontWeight.w700,
@@ -728,7 +728,7 @@ Padding(
         if (showViewAll) ...[
           Text(
             "View All",
-            style: GoogleFonts.poppins(
+            style: TextStyle(
               color: AppTheme.primaryColor,
               fontSize: 12.sp,
               fontWeight: FontWeight.w600,

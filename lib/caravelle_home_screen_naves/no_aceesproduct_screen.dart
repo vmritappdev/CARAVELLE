@@ -1,7 +1,7 @@
 import 'package:caravelle/model/product_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -75,7 +75,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           SizedBox(width: 16.w),
           Text(
             "Product Details",
-            style: GoogleFonts.roboto(
+            style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
               color: Colors.black87,
@@ -127,7 +127,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           // Product Name
           Text(
             widget.product.name,
-            style: GoogleFonts.roboto(
+            style: TextStyle(
               fontSize: 24.sp,
               fontWeight: FontWeight.w700,
               color: Colors.black87,
@@ -139,7 +139,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           // Product Category
           Text(
             widget.product.category,
-            style: GoogleFonts.roboto(
+            style: TextStyle(
               fontSize: 16.sp,
               fontWeight: FontWeight.w500,
               color: Colors.grey.shade600,
@@ -294,7 +294,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         children: [
           Text(
             "Product Specifications",
-            style: GoogleFonts.roboto(
+            style: TextStyle(
               fontSize: 18.sp,
               fontWeight: FontWeight.w600,
               color: Colors.black87,
@@ -326,7 +326,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             flex: 2,
             child: Text(
               "$label:",
-              style: GoogleFonts.roboto(
+              style: TextStyle(
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w500,
                 color: Colors.grey.shade700,
@@ -337,7 +337,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             flex: 3,
             child: Text(
               value,
-              style: GoogleFonts.roboto(
+              style: TextStyle(
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w600,
                 color: Colors.black87,
@@ -355,7 +355,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       children: [
         Text(
           "Product Description",
-          style: GoogleFonts.roboto(
+          style: TextStyle(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
             color: Colors.black87,
@@ -374,7 +374,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
           child: Text(
             widget.product.description,
-            style: GoogleFonts.roboto(
+            style: TextStyle(
               fontSize: 14.sp,
               fontWeight: FontWeight.w400,
               color: Colors.grey.shade800,

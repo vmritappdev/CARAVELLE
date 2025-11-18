@@ -7,7 +7,7 @@ import 'package:caravelle/uittility/app_theme.dart';
 import 'package:caravelle/uittility/conasthan_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -81,7 +81,9 @@ Future<void> _loadMobileNumber() async {
 
  void printLong(String text) {
   final pattern = RegExp('.{1,800}');
-  pattern.allMatches(text).forEach((m) => print(m.group(0)));
+  for (final match in pattern.allMatches(text)) {
+    print(match.group(0));
+  }
 }
 
 
@@ -108,6 +110,7 @@ void initState() {
   _setupScrollControllers();
   _loadMobileNumber();
   
+  
 }
 
 
@@ -119,66 +122,17 @@ void initState() {
 
   void _onGridScroll() {
     if (_gridScrollController.position.pixels == _gridScrollController.position.maxScrollExtent && hasMoreData && !isLoadingMore) {
-      _loadMoreData();
+     // _loadMoreData();
     }
   }
 
   void _onFullScreenScroll() {
     if (_fullScreenScrollController.position.pixels == _fullScreenScrollController.position.maxScrollExtent && hasMoreData && !isLoadingMore) {
-      _loadMoreData();
+     // _loadMoreData();
     }
   }
 
-  Future<void> _loadMoreData() async {
-    if (isLoadingMore) return;
-    
-    setState(() {
-      isLoadingMore = true;
-    });
-
-    // Simulate API call delay
-    await Future.delayed(Duration(seconds: 2));
-
-    // Add more dummy data
-    final newOffers = [
-      Offer(
-        imagePath: 'assets/images/cara4.png',
-        title: "Gold Necklace ${offers.length + 1}",
-        originalPrice: "",
-        discountedPrice: "",
-        description: "Beautiful gold necklace",
-        grossWeight: "10.5g",
-        netWeight: "8.2g",
-        size: "18 inches",
-        tagNumber: "TAG-${offers.length + 1}",
-        status: 'ACTIVE',
-        subproduct: 'Necklace'
-      ),
-      Offer(
-        imagePath: 'assets/images/cara2.png',
-        title: "Gold Earrings ${offers.length + 2}",
-        originalPrice: "",
-        discountedPrice: "",
-        description: "Elegant gold earrings",
-        grossWeight: "5.2g",
-        netWeight: "4.1g",
-        size: "Small",
-        tagNumber: "TAG-${offers.length + 2}",
-        status: 'ACTIVE',
-        subproduct: 'Earrings'
-      ),
-    ];
-
-    setState(() {
-      offers.addAll(newOffers);
-      isLoadingMore = false;
-      currentPage++;
-      if (currentPage >= 3) {
-        hasMoreData = false;
-      }
-    });
-  }
-
+ 
   @override
   void dispose() {
     _gridScrollController.dispose();
@@ -222,6 +176,7 @@ void initState() {
     print('🔹 SubProduct: ${widget.subProducts}');
     print('🔹 Type: ${widget.type}');
     print('🔹 Status Code: ${response.statusCode}');
+    
 
     // 3️⃣ FULL JSON PRINT (Never truncated)
     try {
@@ -241,24 +196,33 @@ void initState() {
         final List<dynamic> list = data['total_data'];
 
         setState(() {
-          offers = list.map((item) {
-            return Offer(
-              imagePath: item['image_url']?.toString() ?? '',
-              title: item['product']?.toString() ?? 'Unknown',
-              originalPrice: item['design']?.toString() ?? '',
-              discountedPrice: item['id']?.toString() ?? '',
-              description: item['name']?.toString() ?? '',
-              grossWeight: item['gross']?.toString() ?? '',
-              netWeight: item['net']?.toString() ?? '',
-              size: item['touch']?.toString() ?? '',
-              tagNumber: item['barcode']?.toString() ?? '',
-              status: item['status']?.toString() ?? '',
-              subproduct: item['sub_product']?.toString() ?? '',
-            );
-          }).toList();
+  offers = list.map((item) {
 
-          isLoading = false;
-        });
+    print("WHISHLIST VALUE: ${item['whislist']}");
+
+    return Offer(
+      imagePath: item['image_url']?.toString() ?? '',
+      title: item['product']?.toString() ?? 'Unknown',
+      originalPrice: item['design']?.toString() ?? '',
+      discountedPrice: item['id']?.toString() ?? '',
+      description: item['name']?.toString() ?? '',
+      grossWeight: item['gross']?.toString() ?? '',
+      netWeight: item['net']?.toString() ?? '',
+      size: item['touch']?.toString() ?? '',
+      tagNumber: item['barcode']?.toString() ?? '',
+      status: item['status']?.toString() ?? '',
+      subproduct: item['sub_product']?.toString() ?? '',
+
+      // ⭐⭐⭐ THE MAIN IMPORTANT FIX ⭐⭐⭐
+      whish: (item['whislist'] ?? "").toString().toUpperCase(),
+      cart: (item['cart'] ?? "").toString().toUpperCase(),
+      
+    );
+  }).toList();
+
+  isLoading = false;
+});
+
       } else {
         print("⚠️ No Data Found in total_data");
         setState(() {
@@ -279,27 +243,42 @@ void initState() {
 
 
 Future<void> fetchFullBestSellerData() async {
-  final url = Uri.parse("https://caravelle.in/barcode/app/best_seller.php");
+  final url = Uri.parse("${baseUrl}best_seller.php");
 
   setState(() => isLoading = true);
+
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String? mobile = prefs.getString('mobile_number');
+
+  if (mobile == null || mobile.isEmpty) {
+    print("⚠️ No mobile number found in SharedPreferences");
+    setState(() => isLoading = false);
+    return;
+  }
 
   try {
     print("🔹 API URL: $url");
     print("🔹 Sent Token: $token");
 
-    final response = await http.post(url, body: {"token": token});
+    final response = await http.post(
+      url,
+      body: {"token": token, "phone": mobile},
+    );
 
     print("🔹 Status Code: ${response.statusCode}");
 
-    // Full raw response
-    print("🔹 Raw Response: ${response.body}");
+    // 🔥 CALL printLong for raw response
+    print("🔹 Raw Response (Safe Print):");
+    printLong(response.body);
 
-    // Pretty JSON decode (with brackets & indentation)
+    // 🔥 Pretty JSON decode
     try {
       final decoded = json.decode(response.body);
       const JsonEncoder encoder = JsonEncoder.withIndent('  ');
       final prettyJson = encoder.convert(decoded);
-      print("✅ Full JSON Response:\n$prettyJson");
+
+      print("🔵 Full Pretty JSON (Safe Print):");
+      printLong(prettyJson); // <-- HERE
     } catch (e) {
       print("⚠️ JSON Decode Failed: $e");
     }
@@ -308,7 +287,6 @@ Future<void> fetchFullBestSellerData() async {
       final data = json.decode(response.body);
 
       if (data["response"] == "success" && data["total_data"] != null) {
-
         final List<dynamic> list = data["total_data"];
 
         print("🟢 Total Items: ${list.length}");
@@ -319,7 +297,7 @@ Future<void> fetchFullBestSellerData() async {
               imagePath: item['image_url'] ?? "",
               title: item['name'] ?? "",
               originalPrice: item['design'] ?? "",
-              discountedPrice: "",
+            discountedPrice: item['id']?.toString() ?? '',
               description: item['product'] ?? "",
               grossWeight: item['gross'] ?? "",
               netWeight: item['net'] ?? "",
@@ -327,12 +305,13 @@ Future<void> fetchFullBestSellerData() async {
               tagNumber: item['barcode'] ?? "",
               status: item['status'] ?? "",
               subproduct: item['sub_product'] ?? "",
+              whish: (item['whislist'] ?? "").toString().toUpperCase(),
+               cart: (item['cart'] ?? "").toString().toUpperCase(),
             );
           }).toList();
 
           isLoading = false;
         });
-
       } else {
         print("⚠️ No Data Found or Response != success");
         setState(() => isLoading = false);
@@ -345,18 +324,25 @@ Future<void> fetchFullBestSellerData() async {
 }
 
 
-
-
 Future<void> fetchExclusiveCollectionData() async {
   final url = Uri.parse("${baseUrl}exclusive_collection.php");
 
   setState(() => isLoading = true);
 
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? mobile = prefs.getString('mobile_number');
+
+    if (mobile == null || mobile.isEmpty) {
+      print("⚠️ No mobile number found in SharedPreferences");
+      setState(() => isLoading = false);
+      return;
+    }
+
   try {
     print("🔹 API URL: $url");
     print("🔹 Sent Token: $token");
 
-    final response = await http.post(url, body: {"token": token});
+    final response = await http.post(url, body: {"token": token,"phone":mobile});
 
     print("🔹 Status Code: ${response.statusCode}");
     print("🔹 Raw Response: ${response.body}");
@@ -385,7 +371,7 @@ Future<void> fetchExclusiveCollectionData() async {
               imagePath: item['image_url'] ?? "",
               title: item['name'] ?? "",
               originalPrice: item['design'] ?? "",
-              discountedPrice: "",
+             discountedPrice: item['id']?.toString() ?? '',
               description: item['product'] ?? "",
               grossWeight: item['gross'] ?? "",
               netWeight: item['net'] ?? "",
@@ -393,6 +379,8 @@ Future<void> fetchExclusiveCollectionData() async {
               tagNumber: item['barcode'] ?? "",
               status: item['status'] ?? "",
               subproduct: item['sub_product'] ?? "",
+               whish: (item['whislist'] ?? "").toString().toUpperCase(),
+                cart: (item['cart'] ?? "").toString().toUpperCase(),
             );
           }).toList();
 
@@ -417,11 +405,20 @@ Future<void> fetchNewArrivalData() async {
 
   setState(() => isLoading = true);
 
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? mobile = prefs.getString('mobile_number');
+
+    if (mobile == null || mobile.isEmpty) {
+      print("⚠️ No mobile number found in SharedPreferences");
+      setState(() => isLoading = false);
+      return;
+    }
+
   try {
     print("🔹 API URL: $url");
     print("🔹 Sent Token: $token");
 
-    final response = await http.post(url, body: {"token": token});
+    final response = await http.post(url, body: {"token": token,'phone':mobile});
 
     print("🔹 Status Code: ${response.statusCode}");
     print("🔹 Raw Response: ${response.body}");
@@ -450,7 +447,7 @@ Future<void> fetchNewArrivalData() async {
               imagePath: item['image_url'] ?? "",
               title: item['name'] ?? "",
               originalPrice: item['design'] ?? "",
-              discountedPrice: "",
+             discountedPrice: item['id']?.toString() ?? '',
               description: item['product'] ?? "",
               grossWeight: item['gross'] ?? "",
               netWeight: item['net'] ?? "",
@@ -458,6 +455,8 @@ Future<void> fetchNewArrivalData() async {
               tagNumber: item['barcode'] ?? "",
               status: item['status'] ?? "",
               subproduct: item['sub_product'] ?? "",
+               whish: (item['whislist'] ?? "").toString().toUpperCase(),
+                cart: (item['cart'] ?? "").toString().toUpperCase(),
             );
           }).toList();
 
@@ -482,11 +481,20 @@ Future<void> fetchCatalogueProductsData() async {
 
   setState(() => isLoading = true);
 
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? mobile = prefs.getString('mobile_number');
+
+    if (mobile == null || mobile.isEmpty) {
+      print("⚠️ No mobile number found in SharedPreferences");
+      setState(() => isLoading = false);
+      return;
+    }
+
   try {
     print("🔹 API URL: $url");
     print("🔹 Sent Token: $token");
 
-    final response = await http.post(url, body: {"token": token});
+    final response = await http.post(url, body: {"token": token,'phone':mobile});
 
     print("🔹 Status Code: ${response.statusCode}");
     print("🔹 Raw Response: ${response.body}");
@@ -515,7 +523,7 @@ Future<void> fetchCatalogueProductsData() async {
               imagePath: item['image_url'] ?? "",
               title: item['name'] ?? "",
               originalPrice: item['design'] ?? "",
-              discountedPrice: "",
+              discountedPrice: item['id']?.toString() ?? '',
               description: item['product'] ?? "",
               grossWeight: item['gross'] ?? "",
               netWeight: item['net'] ?? "",
@@ -523,6 +531,8 @@ Future<void> fetchCatalogueProductsData() async {
               tagNumber: item['barcode'] ?? "",
               status: item['status'] ?? "",
               subproduct: item['sub_product'] ?? "",
+              whish: (item['whislist'] ?? "").toString().toUpperCase(),
+               cart: (item['cart'] ?? "").toString().toUpperCase(),
             );
           }).toList();
 
@@ -556,52 +566,63 @@ Future<void> addToWishlist(Offer offer) async {
       body: {
         "phone": _mobileNumber,
         "barcode": offer.tagNumber,
-        "id": offer.discountedPrice,
+        "id": offer.discountedPrice,  // sending ID
         "token": token
       },
     );
 
-    print("🔹 Wishlist API URL: https://caravelle.in/barcode/app/whislist.php");
-    print("🔹 Sent Phone: $_mobileNumber");
-    print("🔹 Sent Barcode: ${offer.tagNumber}");
-    print("🔹 Sent ID: ${offer.discountedPrice}");
-    print("🔹 Status Code: ${response.statusCode}");
     print("🔹 Raw Response: ${response.body}");
 
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
+    // Decode JSON
+    final data = json.decode(response.body);
 
-      print("✅ Wishlist Response: $data");
+    // ⭐ SENT ID
+    print("🟦 SENT ID: ${offer.discountedPrice}");
 
-      // -----------------------------
-      // ⭐ SHOW SNACKBAR WITH API MESSAGE
-      // -----------------------------
-      if (data["message"] != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.favorite, color: Colors.white),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    data["message"],   // ← API message
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
+    // ⭐ RESPONSE CLIENT ID (coming from API)
+    if (data["client_id"] != null) {
+      print("🟩 RESPONSE CLIENT ID: ${data["client_id"]}");
     } else {
-      print("❌ Server Error: ${response.statusCode}");
+      print("⚠️ RESPONSE CLIENT ID Not Found");
     }
+
+    // MESSAGE
+    String message = data["message"] ?? "";
+    print("👉 API MESSAGE: $message");
+
+    // ⭐ UPDATE WISHLIST STATUS
+    if (message.contains("ADDED")) {
+      setState(() {
+        offer.whish = "YES";
+      });
+    } else if (message.contains("REMOVED")) {
+      setState(() {
+        offer.whish = "NO";
+      });
+    }
+
+    // ⭐ SNACKBAR
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.favorite, color: Colors.white),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.orange,
+        duration: Duration(seconds: 2),
+      ),
+    );
   } catch (e) {
     print("⚠️ Wishlist API Error: $e");
   }
@@ -609,7 +630,78 @@ Future<void> addToWishlist(Offer offer) async {
 
 
 
+Future<void> addToCart(Offer offer) async {
+  try {
+    if (_mobileNumber == null || _mobileNumber!.isEmpty) {
+      print("⚠️ No mobile number found in SharedPreferences");
+      return;
+    }
 
+    final response = await http.post(
+      Uri.parse("${baseUrl}cart.php"),
+      body: {
+        "phone": _mobileNumber,
+        "barcode": offer.tagNumber,
+        "id": offer.discountedPrice,  // same ID passing
+        "token": token,
+      },
+    );
+
+    print("🛒 Raw Cart Response: ${response.body}");
+
+    final data = json.decode(response.body);
+
+    // 🔵 SENT ID
+    print("🟦 SENT ID (Cart): ${offer.discountedPrice}");
+
+    // 🔵 API RESPONSE client_id
+    if (data["client_id"] != null) {
+      print("🟩 CART CLIENT ID: ${data["client_id"]}");
+    } else {
+      print("⚠️ CART CLIENT ID Not Found");
+    }
+
+    // 🔵 API MESSAGE
+    String message = data["message"] ?? "";
+    print("👉 CART API MESSAGE: $message");
+
+    // ⭐⭐⭐ UPDATE CART STATUS ⭐⭐⭐
+    if (message.contains("ADDED")) {
+      setState(() {
+        offer.cart = "YES";
+      });
+    } else if (message.contains("REMOVED")) {
+      setState(() {
+        offer.cart = "NO";
+      });
+    }
+
+    // ⭐ SAME SNACKBAR STYLE (Wishlist laga)
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.shopping_cart, color: Colors.white),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.blue,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  } catch (e) {
+    print("⚠️ Cart API Error: $e");
+  }
+}
 
 
   // Layout types
@@ -707,7 +799,7 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("Layout", style: GoogleFonts.inter(fontSize: 16.sp, fontWeight: FontWeight.w600, color: Color(0xFF2D3748))),
+                      Text("Layout", style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600, color: Color(0xFF2D3748))),
                       IconButton(onPressed: () => Navigator.pop(context), icon: Icon(Icons.close, color: Colors.grey, size: 20.sp), padding: EdgeInsets.zero, constraints: BoxConstraints()),
                     ],
                   ),
@@ -782,7 +874,7 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
               : widget.fetchApiType == "catalogueProducts"
                   ? "CATALOGUE PRODUCTS"
                   : widget.subProducts.toUpperCase(),
-  style: GoogleFonts.lato(
+  style: TextStyle(
     color: Colors.white,
     fontWeight: FontWeight.w700,
     fontSize: 18.sp,
@@ -794,7 +886,7 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
       SizedBox(width: 6.w),
       Text(
         "(${_filteredOffers.length}) items",
-        style: GoogleFonts.inter(
+        style: TextStyle(
           color: Colors.white,
           fontSize: 11.sp,
           fontWeight: FontWeight.w500,
@@ -857,7 +949,7 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
           setState(() {});
         }
       },
-      style: GoogleFonts.inter(
+      style: TextStyle(
         fontSize: 13.sp,
         fontWeight: FontWeight.w500,
         color: Colors.black87,
@@ -876,7 +968,7 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
           minHeight: 32.h,
         ),
         hintText: "Search jewelry...",
-        hintStyle: GoogleFonts.inter(
+        hintStyle: TextStyle(
           color: Colors.grey.shade500,
           fontSize: 13.sp,
         ),
@@ -920,7 +1012,7 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
                           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))]),
                           child: Row(children: [
                             Icon(Icons.filter_list, color: AppTheme.primaryColor, size: 16.sp), SizedBox(width: 4.w),
-                            Text(_selectedCategories.isEmpty ? "Filter" : "Filter (${_selectedCategories.length})", style: GoogleFonts.inter(fontSize: 12)),
+                            Text(_selectedCategories.isEmpty ? "Filter" : "Filter (${_selectedCategories.length})", style: TextStyle(fontSize: 12)),
                           ]),
                         ),
                       ),
@@ -933,7 +1025,7 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
                           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))]),
                           child: Row(children: [
                             Icon(Icons.grid_view_rounded, color: AppTheme.primaryColor, size: 16.sp), SizedBox(width: 6.w),
-                            Text("Layout", style: GoogleFonts.inter(fontSize: 12, )),
+                            Text("Layout", style: TextStyle(fontSize: 12, )),
                             SizedBox(width: 4.w),
                             Icon(Icons.arrow_drop_down, color: AppTheme.primaryColor, size: 16.sp),
                           ]),
@@ -962,7 +1054,7 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
                           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))]),
                           child: Row(children: [
                             Icon(Icons.sort, color: AppTheme.primaryColor, size: 16.sp), SizedBox(width: 4.w),
-                            Text("Sort", style: GoogleFonts.inter(fontSize: 12)),
+                            Text("Sort", style: TextStyle(fontSize: 12)),
                           ]),
                         ),
                       ),
@@ -980,7 +1072,7 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
                     scrollDirection: Axis.horizontal,
                     children: _selectedCategories.map((category) {
                       return Container(margin: EdgeInsets.only(right: 8.r), child: Chip(
-                        label: Text(category, style: GoogleFonts.inter(fontSize: 11.sp, color: Colors.white)),
+                        label: Text(category, style: TextStyle(fontSize: 11.sp, color: Colors.white)),
                         backgroundColor: AppTheme.primaryColor,
                         deleteIcon: Icon(Icons.close, size: 16, color: Colors.white),
                         onDeleted: () { setState(() { _selectedCategories.remove(category); }); },
@@ -1005,8 +1097,8 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
 
   Widget _buildContentByLayout() {
     if (isLoading) return Center(child: CircularProgressIndicator(color: AppTheme.primaryColor));
-    if (!isLoading && offers.isEmpty) return Center(child: Text("No Products Found", style: GoogleFonts.inter(fontSize: 14.sp, fontWeight: FontWeight.w600, color: Colors.grey[700])));
-    if (_filteredOffers.isEmpty) return Center(child: Text("No products found", style: GoogleFonts.inter(color: Colors.grey, fontSize: 16.sp)));
+    if (!isLoading && offers.isEmpty) return Center(child: Text("No Products Found", style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600, color: Colors.grey[700])));
+    if (_filteredOffers.isEmpty) return Center(child: Text("No products found", style: TextStyle(color: Colors.grey, fontSize: 16.sp)));
 
     switch (_selectedLayout) {
       case 0: return _buildGridView();
@@ -1137,12 +1229,16 @@ Widget _buildFullScreenView() {
               Container(
                 width: double.infinity,
                 height: MediaQuery.of(context).size.height * 0.25, // ✅ Responsive height
-                decoration: BoxDecoration(
-                  image: DecorationImage(
-                    image: _getImageProvider(offer.imagePath),
-                    fit: BoxFit.cover,
-                  ),
-                ),
+              decoration: BoxDecoration(
+  image: (offer.imagePath.trim().isNotEmpty &&
+          (offer.imagePath.startsWith('http') || offer.imagePath.startsWith('https')))
+      ? DecorationImage(
+          image: NetworkImage(offer.imagePath),
+          fit: BoxFit.cover,
+        )
+      : null, // no image if URL invalid
+),
+
                 child: Stack(
                   children: [
                     // 🔹 Status Tag
@@ -1161,7 +1257,7 @@ Widget _buildFullScreenView() {
                           offer.status?.toUpperCase() == 'ACTIVE'
                               ? 'In Stock'
                               : 'Out of Stock',
-                          style: GoogleFonts.inter(
+                          style: TextStyle(
                             color: Colors.white,
                             fontSize: 10.sp,
                             fontWeight: FontWeight.bold,
@@ -1175,24 +1271,30 @@ Widget _buildFullScreenView() {
                       right: 12,
                       child: Row(
                         children: [
-                          _buildIconButton(
-                            Icons.shopping_cart_outlined,
-                            () => _addToCart(offer),
-                            size: 16.sp,
-                          ),
+                        _buildIconButton(
+  offer.cart == "YES"
+      ? Icons.shopping_cart
+      : Icons.shopping_cart_outlined,
+  () async {
+    await addToCart(offer);
+    setState(() {}); // refresh UI
+  },
+  size: 16.sp,
+  iconColor: offer.cart == "YES" ? Colors.blue : Colors.grey,
+),
+
                           SizedBox(width: 8.w),
 _buildIconButton(
-  offer.whish == "yes" ? Icons.favorite : Icons.favorite_border,
+  offer.whish == "YES" ? Icons.favorite : Icons.favorite_border,
   () async {
     await addToWishlist(offer);
-
-    setState(() {
-      offer.whish = (offer.whish == "yes") ? "" : "yes";
-    });
+    setState(() {}); // UI refresh
   },
   size: 18.sp,
-  iconColor: offer.whish == "yes" ? Colors.red : Colors.grey,
+  iconColor: offer.whish == "YES" ? Colors.red : Colors.grey,
 )
+
+
 
 
 
@@ -1217,7 +1319,7 @@ _buildIconButton(
         text: (offer.subproduct != null && offer.subproduct!.isNotEmpty)
             ? offer.subproduct!.toUpperCase()
             : offer.title.toUpperCase(),
-        style: GoogleFonts.inter(
+        style: TextStyle(
           fontWeight: FontWeight.w700,
           fontSize: 16.sp,
           color: const Color(0xFF2D3748),
@@ -1228,7 +1330,7 @@ _buildIconButton(
       if (offer.originalPrice.isNotEmpty)
         TextSpan(
           text: ' (${offer.originalPrice.toUpperCase()})',
-          style: GoogleFonts.inter(
+          style: TextStyle(
             fontSize: 12.sp,
             color: Colors.grey[600],
           ),
@@ -1296,7 +1398,13 @@ _buildIconButton(
             width: double.infinity,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.vertical(top: Radius.circular(5)),
-              image: DecorationImage(image: _getImageProvider(offer.imagePath), fit: BoxFit.cover),
+             image: (offer.imagePath.trim().isNotEmpty &&
+            (offer.imagePath.startsWith('http') || offer.imagePath.startsWith('https')))
+        ? DecorationImage(
+            image: NetworkImage(offer.imagePath),
+            fit: BoxFit.cover,
+          )
+        : null,
             ),
             child: Stack(
               children: [
@@ -1311,7 +1419,7 @@ _buildIconButton(
                     ),
                     child: Text(
                       offer.status?.toUpperCase() == 'ACTIVE' ? 'In Stock' : 'Out of Stock',
-                      style: GoogleFonts.inter(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -1320,20 +1428,28 @@ _buildIconButton(
                   right: 8,
                   child: Row(
                     children: [
-                      _buildSmallIconButton(Icons.shopping_cart_outlined, () => _addToCart(offer)),
+                     _buildSmallIconButton(
+  offer.cart == "YES" 
+      ? Icons.shopping_cart 
+      : Icons.shopping_cart_outlined,
+  () async {
+    await addToCart(offer);
+  },
+  iconColor: offer.cart == "YES" ? Colors.blue : Colors.grey,
+),
+
                       SizedBox(width: 4),
-                   _buildIconButton(
-  offer.whish == "yes" ? Icons.favorite : Icons.favorite_border,
+                _buildIconButton(
+  offer.whish == "YES" ? Icons.favorite : Icons.favorite_border,
   () async {
     await addToWishlist(offer);
-
-    setState(() {
-      offer.whish = (offer.whish == "yes") ? "" : "yes";
-    });
+    setState(() {}); // UI refresh
   },
   size: 18.sp,
-  iconColor: offer.whish == "yes" ? Colors.red : Colors.grey,
+  iconColor: offer.whish == "YES" ? Colors.red : Colors.grey,
 )
+
+
 
                     ],
                   ),
@@ -1357,7 +1473,7 @@ _buildIconButton(
                             text: (offer.subproduct != null && offer.subproduct!.isNotEmpty)
                                 ? offer.subproduct!.toUpperCase()
                                 : offer.title.toUpperCase(),
-                            style: GoogleFonts.inter(
+                            style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 11.sp,
                               color: const Color(0xFF2D3748),
@@ -1366,7 +1482,7 @@ _buildIconButton(
                           if (offer.originalPrice.isNotEmpty)
                             TextSpan(
                               text: ' (${offer.originalPrice.toUpperCase()})',
-                              style: GoogleFonts.inter(fontSize: 10.sp, color: Colors.grey[600]),
+                              style: TextStyle(fontSize: 10.sp, color: Colors.grey[600]),
                             ),
                         ],
                       ),
@@ -1414,7 +1530,13 @@ _buildIconButton(
               height: 200.h, // Slightly reduced
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(5)),
-                image: DecorationImage(image: _getImageProvider(offer.imagePath), fit: BoxFit.cover),
+              image: (offer.imagePath.trim().isNotEmpty &&
+            (offer.imagePath.startsWith('http') || offer.imagePath.startsWith('https')))
+        ? DecorationImage(
+            image: NetworkImage(offer.imagePath),
+            fit: BoxFit.cover,
+          )
+        : null,
               ),
               child: Stack(
                 children: [
@@ -1429,7 +1551,7 @@ _buildIconButton(
                       ),
                       child: Text(
                         offer.status?.toUpperCase() == 'ACTIVE' ? 'In Stock' : 'Out of Stock',
-                        style: GoogleFonts.inter(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -1439,20 +1561,29 @@ _buildIconButton(
                     right: 12,
                     child: Row(
                       children: [
-                        _buildIconButton(Icons.shopping_cart_outlined, () => _addToCart(offer), size: 18.sp),
-                        SizedBox(width: 8),
                      _buildIconButton(
-  offer.whish == "yes" ? Icons.favorite : Icons.favorite_border,
+  offer.cart == "YES"
+      ? Icons.shopping_cart
+      : Icons.shopping_cart_outlined,
+  () async {
+    await addToCart(offer);
+    setState(() {}); // refresh UI
+  },
+  size: 16.sp,
+  iconColor: offer.cart == "YES" ? Colors.blue : Colors.grey,
+),
+
+                        SizedBox(width: 8),
+                 _buildIconButton(
+  offer.whish == "YES" ? Icons.favorite : Icons.favorite_border,
   () async {
     await addToWishlist(offer);
-
-    setState(() {
-      offer.whish = (offer.whish == "yes") ? "" : "yes";
-    });
+    setState(() {}); // UI refresh
   },
   size: 18.sp,
-  iconColor: offer.whish == "yes" ? Colors.red : Colors.grey,
+  iconColor: offer.whish == "YES" ? Colors.red : Colors.grey,
 )
+
 
                       ],
                     ),
@@ -1476,7 +1607,7 @@ _buildIconButton(
         text: (offer.subproduct != null && offer.subproduct!.isNotEmpty)
             ? offer.subproduct!.toUpperCase()
             : offer.title.toUpperCase(),
-        style: GoogleFonts.inter(
+        style: TextStyle(
           fontWeight: FontWeight.w700,
           fontSize: 16.sp,
           color: const Color(0xFF2D3748),
@@ -1487,7 +1618,7 @@ _buildIconButton(
       if (offer.originalPrice.isNotEmpty)
         TextSpan(
           text: ' (${offer.originalPrice.toUpperCase()})',
-          style: GoogleFonts.inter(
+          style: TextStyle(
             fontSize: 12.sp,
             color: Colors.grey[600],
           ),
@@ -1562,16 +1693,36 @@ Widget _buildIconButton(
 
 
 
-  Widget _buildSmallIconButton(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 20, height: 20,
-        decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 2, offset: Offset(0, 1))]),
-        child: Icon(icon, color: AppTheme.primaryColor, size: 12),
+Widget _buildSmallIconButton(
+  IconData icon,
+  VoidCallback onTap, {
+  Color iconColor = Colors.grey,   // ⭐ Added
+}) {
+  return GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: 20,
+      height: 20,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 2,
+            offset: Offset(0, 1),
+          )
+        ],
       ),
-    );
-  }
+      child: Icon(
+        icon,
+        color: iconColor,       // ⭐ Dynamic color added
+        size: 12,
+      ),
+    ),
+  );
+}
+
 
   Widget _buildDetailRow(String label, String value, {bool isHorizontal = false}) {
     return Padding(
@@ -1579,8 +1730,8 @@ Widget _buildIconButton(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: Colors.grey[700], fontSize: isHorizontal ? 10.sp : 12.sp)),
-          Text(value, style: GoogleFonts.inter(color: Color(0xFF2D3748), fontSize: isHorizontal ? 10.sp : 12.sp)),
+          Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700], fontSize: isHorizontal ? 10.sp : 12.sp)),
+          Text(value, style: TextStyle(color: Color(0xFF2D3748), fontSize: isHorizontal ? 10.sp : 12.sp)),
         ],
       ),
     );
@@ -1589,7 +1740,7 @@ Widget _buildIconButton(
   Widget _buildSmallDetailText(String text) {
     return Padding(
       padding: EdgeInsets.only(bottom: 2.h),
-      child: Text(text, style: GoogleFonts.inter(fontSize: 9.sp, color: Colors.grey[600])),
+      child: Text(text, style: TextStyle(fontSize: 9.sp, color: Colors.grey[600])),
     );
   }
 
@@ -1599,7 +1750,7 @@ Widget _buildIconButton(
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Row(children: [
         Icon(Icons.check_circle, color: Colors.white, size: 20), SizedBox(width: 8),
-        Expanded(child: Text("${offer.title} added to cart", style: GoogleFonts.inter(color: Colors.white, fontSize: 14))),
+        Expanded(child: Text("${offer.title} added to cart", style: TextStyle(color: Colors.white, fontSize: 14))),
       ]),
       backgroundColor: Colors.green, duration: Duration(seconds: 2),
     ));
@@ -1610,14 +1761,8 @@ Widget _buildIconButton(
 
  
 
-  ImageProvider<Object> _getImageProvider(String? path) {
-    final imagePath = path?.trim() ?? '';
-    if (imagePath.isNotEmpty && (imagePath.startsWith('http') || imagePath.startsWith('https'))) {
-    return NetworkImage(imagePath);
-    } else {
-      return AssetImage('assets/images/cara4.png');
-    }
-  }
+ 
+
 
   // Filter Bottom Sheet method would go here...
   void _showFilterBottomSheet(BuildContext context) {
@@ -1667,7 +1812,7 @@ Widget _buildIconButton(
                       children: [
                         Text(
                           "Filters",
-                          style: GoogleFonts.lato(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF2D3748),
@@ -1693,7 +1838,7 @@ Widget _buildIconButton(
                       child: TextField(
                         decoration: InputDecoration(
                           hintText: "Search categories...",
-                          hintStyle: GoogleFonts.inter(color: Colors.grey, fontSize: 13.h),
+                          hintStyle: TextStyle(color: Colors.grey, fontSize: 13.h),
                           prefixIcon: Icon(Icons.search, color: AppTheme.primaryColor),
                           border: InputBorder.none,
                         ),
@@ -1708,7 +1853,7 @@ Widget _buildIconButton(
                       alignment: Alignment.centerLeft,
                       child: Text(
                         "Select your favourite categories",
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: Color(0xFF2D3748),
@@ -1751,7 +1896,7 @@ Widget _buildIconButton(
                                 child: CheckboxListTile(
                                   title: Text(
                                     category,
-                                    style: GoogleFonts.inter(
+                                    style: TextStyle(
                                       fontSize: 12.sp,
                                       fontWeight: FontWeight.w500,
                                       color: Color(0xFF2D3748),
@@ -1793,7 +1938,7 @@ Widget _buildIconButton(
                               children: [
                                 Text(
                                   "Weight Range (grams)",
-                                  style: GoogleFonts.inter(
+                                  style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF2D3748),
@@ -1816,11 +1961,11 @@ Widget _buildIconButton(
                                           keyboardType: TextInputType.number,
                                           decoration: InputDecoration(
                                             labelText: "From",
-                                            labelStyle: GoogleFonts.inter(fontSize: 12.sp),
+                                            labelStyle: TextStyle(fontSize: 12.sp),
                                             border: InputBorder.none,
                                             contentPadding: EdgeInsets.symmetric(horizontal: 12),
                                             suffixText: "g",
-                                            suffixStyle: GoogleFonts.inter(
+                                            suffixStyle: TextStyle(
                                               color: Colors.grey,
                                               fontSize: 12.sp,
                                             ),
@@ -1845,11 +1990,11 @@ Widget _buildIconButton(
                                           keyboardType: TextInputType.number,
                                           decoration: InputDecoration(
                                             labelText: "To",
-                                            labelStyle: GoogleFonts.inter(fontSize: 12.sp),
+                                            labelStyle: TextStyle(fontSize: 12.sp),
                                             border: InputBorder.none,
                                             contentPadding: EdgeInsets.symmetric(horizontal: 12),
                                             suffixText: "g",
-                                            suffixStyle: GoogleFonts.inter(
+                                            suffixStyle: TextStyle(
                                               color: Colors.grey,
                                               fontSize: 12.sp,
                                             ),
@@ -1885,7 +2030,7 @@ Widget _buildIconButton(
                                   children: [
                                     Text(
                                       "Size",
-                                      style: GoogleFonts.inter(
+                                      style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                         color: Color(0xFF2D3748),
@@ -1893,7 +2038,7 @@ Widget _buildIconButton(
                                     ),
                                     Text(
                                       "${_selectedSize.toStringAsFixed(1)}",
-                                      style: GoogleFonts.inter(
+                                      style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                         color: AppTheme.primaryColor,
@@ -1925,14 +2070,14 @@ Widget _buildIconButton(
                                   children: [
                                     Text(
                                       "1",
-                                      style: GoogleFonts.inter(
+                                      style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.grey,
                                       ),
                                     ),
                                     Text(
                                       "10",
-                                      style: GoogleFonts.inter(
+                                      style: TextStyle(
                                         fontSize: 12,
                                         color: Colors.grey,
                                       ),
@@ -1958,7 +2103,7 @@ Widget _buildIconButton(
                               children: [
                                 Text(
                                   "Design Type",
-                                  style: GoogleFonts.inter(
+                                  style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF2D3748),
@@ -1991,7 +2136,7 @@ Widget _buildIconButton(
                                           child: Text(
                                             type,
                                             textAlign: TextAlign.center,
-                                            style: GoogleFonts.inter(
+                                            style: TextStyle(
                                               fontSize: 12.sp,
                                               fontWeight: FontWeight.w500,
                                               color: isSelected ? Colors.white : Color(0xFF2D3748),
@@ -2039,7 +2184,7 @@ Widget _buildIconButton(
                             ),
                             child: Text(
                               "Clear All",
-                              style: GoogleFonts.inter(
+                              style: TextStyle(
                                 color: AppTheme.primaryColor,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -2066,7 +2211,7 @@ Widget _buildIconButton(
                             ),
                             child: Text(
                               "Apply Filters",
-                              style: GoogleFonts.inter(
+                              style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
                               ),

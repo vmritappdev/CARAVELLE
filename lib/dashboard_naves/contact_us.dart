@@ -2,7 +2,7 @@ import 'package:android_intent_plus/android_intent.dart';
 import 'package:android_intent_plus/flag.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:url_launcher/url_launcher.dart';
 import 'package:caravelle/uittility/app_theme.dart';
 
@@ -42,7 +42,7 @@ class ContactUsScreen extends StatelessWidget {
           iconTheme: IconThemeData(color: Colors.white),
           title: Text(
             "Contact Us",
-            style: GoogleFonts.roboto(
+            style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 20.sp,
               color: Colors.white,
@@ -59,7 +59,7 @@ class ContactUsScreen extends StatelessWidget {
             children: [
               Text(
                 "Get in Touch",
-                style: GoogleFonts.poppins(
+                style: TextStyle(
                   fontSize: 22.sp,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
@@ -68,7 +68,7 @@ class ContactUsScreen extends StatelessWidget {
               SizedBox(height: 10.h),
               Text(
                 "We would love to hear from you! Reach out for queries, support, or feedback.",
-                style: GoogleFonts.poppins(
+                style: TextStyle(
                   fontSize: 14.sp,
                   color: Colors.grey.shade700,
                   height: 1.5,
@@ -105,7 +105,7 @@ class ContactUsScreen extends StatelessWidget {
                     icon: Icon(Icons.chat, color: Colors.white, size: 20.w),
                     label: Text(
                       "Chat with us",
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -165,7 +165,7 @@ class ContactUsScreen extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.black87,
@@ -174,7 +174,7 @@ class ContactUsScreen extends StatelessWidget {
                   SizedBox(height: 4.h),
                   Text(
                     subtitle,
-                    style: GoogleFonts.poppins(
+                    style: TextStyle(
                       fontSize: 12.sp,
                       color: Colors.grey.shade700,
                     ),

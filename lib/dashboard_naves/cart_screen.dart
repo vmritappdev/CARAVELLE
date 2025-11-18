@@ -1,3 +1,4 @@
+import 'package:caravelle/uittility/app_theme.dart';
 import 'package:flutter/material.dart';
 
 // --- 1. Data Model for Cart Item ---
@@ -82,19 +83,14 @@ class _CartScreenState extends State<CartScreen> {
         leading: const BackButton(color: Colors.black),
         title: const Text('Cart', style: TextStyle(color: Colors.black)),
         centerTitle: false,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 16.0),
-            child: Icon(Icons.search, color: Colors.black),
-          ),
-        ],
+       
       ),
       
       body: Column(
         children: [
           // Top Banner (Guaranteed Replacement)
           Container(
-            color: Colors.green.shade900,
+            color: AppTheme.primaryColor,
             padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -161,15 +157,7 @@ class _CartScreenState extends State<CartScreen> {
                     )),
 
                 // Apply Coupon Section
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
-                  child: Text(
-                    'Apply Coupon',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                CouponSelector(),
+               
               ],
             ),
           ),
@@ -216,7 +204,7 @@ class _CartScreenState extends State<CartScreen> {
                     // Handle Checkout
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade700,
+                    backgroundColor: AppTheme.primaryColor,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8)),
                   ),
@@ -351,7 +339,7 @@ class CartItemCard extends StatelessWidget {
 
                     // Delete Icon
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, color: Colors.grey, size: 24),
+                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 24),
                       onPressed: () => onDelete(item),
                     ),
                   ],

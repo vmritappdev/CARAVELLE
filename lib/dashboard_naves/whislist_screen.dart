@@ -1,45 +1,21 @@
-import 'package:caravelle/model/wishlistitem_model.dart';
-import 'package:caravelle/uittility/app_theme.dart';
+import 'dart:convert';
+import 'package:caravelle/dashboard_naves/jewelery_screen.dart'; // Ensure this path is correct
+import 'package:caravelle/model/offerscreen.dart'; // Ensure this path is correct
+import 'package:caravelle/model/wishlistitem_model.dart'; // Ensure this path is correct
+import 'package:caravelle/uittility/app_theme.dart'; // Ensure this path is correct
+import 'package:caravelle/uittility/conasthan_api.dart'; // Ensure this path is correct
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
-// --- Sample Wishlist Data (This list is now correctly typed using the imported model) ---
-final List<WishlistItem> dummyWishlist = [
-  WishlistItem(
-    brandName: 'BHRM',
-    imageUrl: 'assets/images/cara4.png',
-    // Assuming the imported model uses these shorter property names:
-    gross: '5.45 gms',
-    stone: '1.20 ct',
-    net: '4.25 gms',
-    tag: '₹18,500',
-    isSelected: true,
-  ),
-  WishlistItem(
-    brandName: 'GLAM ROOTS',
-    imageUrl: 'assets/images/cara4.png',
-    gross: '8.10 gms',
-    stone: '2.50 ct',
-    net: '5.60 gms',
-    tag: '₹45,999',
-  ),
-  WishlistItem(
-    brandName: 'GOSRIKI',
-    imageUrl: 'assets/images/cara4.png',
-    gross: '3.90 gms',
-    stone: '0.80 ct',
-    net: '3.10 gms',
-    tag: '₹22,150',
-  ),
-  WishlistItem(
-    brandName: 'KVS FAB',
-    imageUrl: 'assets/images/cara4.png',
-    gross: '12.00 gms',
-    stone: '4.00 ct',
-    net: '8.00 gms',
-    tag: '₹85,000',
-  ),
-];
+// --- Sample Wishlist Data ---
+final List<WishlistItem> dummyWishlist = [];
 
+bool isLoading = false;
+
+// ⚠️ గమనిక: 'baseUrl', 'token', 'AppTheme.primaryColor', 'WishlistItem' మోడల్స్ 
+// మరియు 'Offer' మోడల్ మీ ప్రాజెక్ట్‌లో సరిగ్గా నిర్వచించబడి ఉండాలి.
 
 class WishlistScreen extends StatefulWidget {
   const WishlistScreen({super.key});
@@ -49,8 +25,8 @@ class WishlistScreen extends StatefulWidget {
 }
 
 class _WishlistScreenState extends State<WishlistScreen> {
-  // Now _wishlist is correctly initialized with the imported type
   final List<WishlistItem> _wishlist = List.from(dummyWishlist);
+  bool _selectAll = false;
 
   int get _selectedCount => _wishlist.where((item) => item.isSelected).length;
 
@@ -66,6 +42,17 @@ class _WishlistScreenState extends State<WishlistScreen> {
   void _toggleSelection(WishlistItem item, bool? value) {
     setState(() {
       item.isSelected = value ?? false;
+      // Update selectAll status
+      _selectAll = _wishlist.isNotEmpty && _wishlist.every((i) => i.isSelected);
+    });
+  }
+
+  void _toggleSelectAll() {
+    setState(() {
+      _selectAll = !_selectAll;
+      for (var item in _wishlist) {
+        item.isSelected = _selectAll;
+      }
     });
   }
 
@@ -78,8 +65,11 @@ class _WishlistScreenState extends State<WishlistScreen> {
       return;
     }
 
+    print("🛒 MOVING TO CART - SELECTED ITEMS: ${selectedItems.length}");
+
     setState(() {
       _wishlist.removeWhere((item) => item.isSelected);
+      _selectAll = false;
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -91,10 +81,148 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 
   void _addToBag(WishlistItem item) {
+    print("🛍️ ADDING SINGLE ITEM TO BAG: ${item.brandName}");
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${item.brandName} added to bag!')),
     );
     _removeItem(item);
+  }
+
+  String _getDisplayText(String? subProduct, String? product, String? design) {
+    String displayText = '';
+    
+    if (subProduct != null && subProduct.isNotEmpty && subProduct != 'null') {
+      displayText = subProduct;
+    } 
+    else if (product != null && product.isNotEmpty && product != 'null') {
+      displayText = product;
+    }
+    
+    if (design != null && design.isNotEmpty && design != 'null' && displayText.isNotEmpty) {
+      displayText = '$displayText ($design)';
+    }
+    else if (design != null && design.isNotEmpty && design != 'null' && displayText.isEmpty) {
+      displayText = design;
+    }
+    
+    return displayText;
+  }
+
+  Future<void> fetchWishlistItems() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? mobile = prefs.getString('mobile_number');
+
+      if (mobile == null || mobile.isEmpty) {
+        print("❌ ERROR: No mobile number found in SharedPreferences");
+        setState(() => isLoading = false);
+        return;
+      }
+
+      print("📱 FETCHING WISHLIST - Mobile: $mobile");
+      final response = await http.post(
+        Uri.parse("${baseUrl}whislist_display.php"),
+        body: {
+          "phone": mobile,
+          "token": token,
+        },
+      );
+
+      print("📊 API RESPONSE STATUS: ${response.statusCode}");
+      print("📄 RAW RESPONSE LENGTH: ${response.body.length} characters"); // DEBUG PRINT
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        
+        if (data["response"] == "success" && data["total_data"] != null) {
+          List<dynamic> list = data["total_data"];
+          print("🔄 PROCESSING ${list.length} ITEMS FROM API");
+
+          setState(() {
+            _wishlist.clear();
+            _wishlist.addAll(
+              list.map(
+                (item) {
+                  String displayText = _getDisplayText(
+                    item["sub_product"]?.toString(),
+                    item["product"]?.toString(),
+                    item["design"]?.toString(),
+                  );
+                  
+                  return WishlistItem(
+                    brandName: item["name"] ?? "",
+                    imageUrl: item["image_url"] ?? "",
+                    gross: item["gross"]?.toString() ?? "",
+                    net: item["net"]?.toString() ?? "",
+                    stone: item["stone"]?.toString() ?? "",
+                    tag: item["barcode"]?.toString() ?? "",
+                    isSelected: false,
+                    product: item["product"]?.toString(),
+                    subProduct: item["sub_product"]?.toString(),
+                    design: item["design"]?.toString(),
+                    displayText: displayText,
+                  );
+                },
+              ),
+            );
+          });
+          print("✅ WISHLIST LOADED SUCCESSFULLY: ${_wishlist.length} items");
+        } else {
+          print("⚠️ WARNING: API returned no data or failed response");
+        }
+      } else {
+        print("❌ ERROR: API request failed with status ${response.statusCode}");
+      }
+
+      setState(() {
+        isLoading = false;
+      });
+    } catch (e) {
+      print("❌ EXCEPTION in fetchWishlistItems(): $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  void _navigateToDetailScreen(BuildContext context, WishlistItem item) {
+    // WishlistItem ను Offer మోడల్‌గా మార్చడం (Mapping WishlistItem to Offer)
+    final offer = Offer(
+      imagePath: item.imageUrl,
+      title: item.displayText ?? item.brandName,
+      tagNumber: item.tag,
+      grossWeight: item.gross,
+      netWeight: item.net,
+      description: '', 
+      discountedPrice: '',
+      whish: '',
+      originalPrice: '',
+      // Add other required fields if necessary
+    );
+
+    print("➡️ NAVIGATING to Detail Screen for Tag: ${item.tag}");
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => JewelryDetailScreen(
+          offer: offer,
+          tagNumber: item.tag,
+        ),
+      ),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    print("🚀 WISHLIST SCREEN INITIALIZED");
+    fetchWishlistItems();
   }
 
   @override
@@ -104,80 +232,113 @@ class _WishlistScreenState extends State<WishlistScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-      
         title: const Text('Wishlist', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         centerTitle: true,
+        leading: _wishlist.isNotEmpty
+            ? TextButton(
+                onPressed: _toggleSelectAll,
+                child: Text(
+                  _selectAll ? 'Deselect All' : 'Select All',
+                  style: TextStyle(
+                    color: AppTheme.primaryColor,
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              )
+            : null,
         actions: [
           Stack(
             children: [
               IconButton(
-                icon: const Icon(Icons.shopping_bag_outlined, color: Colors.black),
-                onPressed: () {},
+                icon: const Icon(Icons.shopping_cart, color: Colors.black),
+                onPressed: () {
+                  print("🛍️ BAG ICON PRESSED");
+                },
               ),
-              const Positioned(
+              Positioned(
                 right: 8,
                 top: 8,
-                child: CircleAvatar(
-                  radius: 7,
-                  backgroundColor: Colors.red,
-                  child: Text('2', style: TextStyle(color: Colors.white, fontSize: 8)),
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 14,
+                    minHeight: 14,
+                  ),
+                  child: Text(
+                    '2',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 8.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
             ],
           ),
+          SizedBox(width: 8.w),
         ],
       ),
       
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-        child: GridView.builder(
-          itemCount: _wishlist.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.61,
-            crossAxisSpacing: 10.0,
-            mainAxisSpacing: 10.0,
-          ),
-          itemBuilder: (context, index) {
-            final item = _wishlist[index];
-            return WishlistProductCard(
-              item: item,
-              onRemove: () => _removeItem(item),
-              onAddToBag: () => _addToBag(item),
-              onToggleSelect: (value) => _toggleSelection(item, value),
-            );
-          },
-        ),
-      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _wishlist.isEmpty
+              ? Center(
+                  child: Text(
+                    "Your Wishlist is Empty.",
+                    style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade600),
+                  ),
+                )
+              : Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: GridView.builder(
+                    itemCount: _wishlist.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.55,
+                      crossAxisSpacing: 12.0,
+                      mainAxisSpacing: 12.0,
+                    ),
+                    itemBuilder: (context, index) {
+                      final item = _wishlist[index];
+                      return WishlistProductCard(
+                        item: item,
+                        onRemove: () => _removeItem(item),
+                        onAddToBag: () => _addToBag(item),
+                        onToggleSelect: (value) => _toggleSelection(item, value),
+                        // ⭐️ ఇక్కడ onTap ఫంక్షన్‌ను పాస్ చేస్తున్నాము
+                        onTap: () => _navigateToDetailScreen(context, item),
+                      );
+                    },
+                  ),
+                ),
 
-      // Bottom Bar for Bulk Action
       bottomNavigationBar: Container(
-        height: 65,
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        height: 70.h,
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
         decoration: BoxDecoration(
           color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
-              spreadRadius: 1,
-              blurRadius: 5,
-              offset: const Offset(0, -3),
-            ),
-          ],
+          border: Border(top: BorderSide(color: Colors.grey.shade200, width: 1)),
         ),
         child: ElevatedButton(
           onPressed: _selectedCount > 0 ? _moveSelectedToCart : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: _selectedCount > 0 ? AppTheme.primaryColor : Colors.grey,
+            backgroundColor: _selectedCount > 0 ? AppTheme.primaryColor : Colors.grey.shade400,
             foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            elevation: 2,
           ),
           child: Text(
             _selectedCount > 0
-                ? 'Add $_selectedCount Selected Item(s) to Cart'
-                : 'Select Items to Add to Crt',
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ? 'Add $_selectedCount Selected Item(s) to Bag'
+                : 'Select Items to Add to Bag',
+            style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w700),
           ),
         ),
       ),
@@ -185,14 +346,14 @@ class _WishlistScreenState extends State<WishlistScreen> {
   }
 }
 
-// --------------------------------------------------------------------------
-// --- 3. Wishlist Product Card (Make sure property names match the model) ---
-// --------------------------------------------------------------------------
+// ----------------------------------------------------------------------
+
 class WishlistProductCard extends StatelessWidget {
   final WishlistItem item;
   final VoidCallback onRemove;
   final VoidCallback onAddToBag;
   final Function(bool?) onToggleSelect;
+  final VoidCallback? onTap; // ✅ Tap callback for navigation
 
   const WishlistProductCard({
     super.key,
@@ -200,23 +361,27 @@ class WishlistProductCard extends StatelessWidget {
     required this.onRemove,
     required this.onAddToBag,
     required this.onToggleSelect,
+    this.onTap, // ✅ Added onTap to constructor
   });
 
-  // Helper widget to display a single jewelry tag
-  Widget _buildJewelryTag(String label, String value, {bool isLarge = false}) {
+  Widget _buildJewelryDetail(String label, String value, {Color? color}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 8,
+          style: TextStyle(
+            fontSize: 9.sp,
+            color: Colors.grey.shade600,
           ),
         ),
+        SizedBox(height: 2.h),
         Text(
-          value,
-          style: const TextStyle(
-            fontSize: 8,
+          value.isEmpty ? 'N/A' : value,
+          style: TextStyle(
+            fontSize: 11.sp,
+            fontWeight: FontWeight.w600,
+            color: color ?? Colors.black87,
           ),
         ),
       ],
@@ -225,134 +390,177 @@ class WishlistProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(5.0),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Product Image with Checkbox Overlay
-          Expanded(
-            child: Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(5),
-                    topRight: Radius.circular(5),
-                  ),
-                  child: Image.asset(
-                    item.imageUrl,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey.shade200,
-                        child: const Center(child: Icon(Icons.image_not_supported, color: Colors.grey)),
-                      );
-                    },
-                  ),
-                ),
-                Positioned(
-                  top: -10,
-                  left: -10,
-                  child: Checkbox(
-  value: item.isSelected,
-  onChanged: onToggleSelect,
-  activeColor: AppTheme.primaryColor, // check fill color
-  checkColor: Colors.white, // tick color
-  side: BorderSide(
-    color: const Color.fromRGBO(0, 148, 176, 1),  // border color also primary
-    width: 2,
-  ),
-  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-)
-
-                ),
-              ],
-            ),
+    // ⭐️ మొత్తం కార్డ్ కంటైనర్‌ను GestureDetector తో చుట్టాము
+    return GestureDetector(
+      onTap: onTap, // ✅ కార్డ్ మీద ఎక్కడ క్లిక్ చేసినా (బటన్స్/చెక్‌బాక్స్ మినహా) నావిగేట్ అవుతుంది.
+      onLongPress: () => onToggleSelect(!item.isSelected), // Long Press తో సెలెక్ట్
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12.0),
+          border: Border.all(
+            color: item.isSelected ? AppTheme.primaryColor : Colors.grey.shade300,
+            width: item.isSelected ? 2.0 : 1.5,
           ),
-          
-          // Product Details
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Brand Name
-                Text(
-                  item.brandName,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
- 
-                // NEW: Jewelry Tags Section
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Gross Weight (First Line) - Using item.gross (matching provided list)
-                    _buildJewelryTag('Gross', item.gross, isLarge: true),
-                    // Stone Weight (First Line) - Using item.stone (matching provided list)
-                    _buildJewelryTag('Stone ', item.stone, isLarge: true),
-                  ],
-                ),
-                const SizedBox(height: 8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.15),
+              spreadRadius: 1,
+              blurRadius: 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // IMAGE AREA
+            Expanded(
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(11),
+                      topRight: Radius.circular(11),
+                    ),
+                    child: item.imageUrl.isNotEmpty
+                        ? Image.network(
+                            item.imageUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: Colors.grey.shade200,
+                              child: const Center(
+                                child: Icon(Icons.broken_image, color: Colors.grey, size: 40),
+                              ),
+                            ),
+                          )
+                        : Container(
+                            color: Colors.grey.shade200,
+                            child: const Center(
+                              child: Icon(Icons.image_not_supported, color: Colors.grey, size: 40),
+                            ),
+                          ),
+                  ),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Net Weight (Second Line - Small Text) - Using item.net (matching provided list)
-                    _buildJewelryTag('Net ', item.net),
-                    // Tag Price (Second Line - Small Text) - Using item.tag (matching provided list)
-                    _buildJewelryTag('Tag ', item.tag),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                
-                // Action Buttons Row (Unchanged)
-                Row(
-                  children: [
-                    // Remove Button
+                  // SELECTION OVERLAY
+                  if (item.isSelected)
                     Container(
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: InkWell(
-                        onTap: onRemove,
-                        child: const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Icon(Icons.delete_outline, color: Colors.black, size: 20),
+                        color: AppTheme.primaryColor.withOpacity(0.15),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(11),
+                          topRight: Radius.circular(11),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
 
-                    // Add to Bag Button
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: onAddToBag,
-                        icon: const Icon(Icons.shopping_bag_outlined, size: 18),
-                        label: const Text('Add to Cart', style: TextStyle(fontSize: 12)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-                          elevation: 0,
-                        ),
+                  // CHECKBOX (top left) - ఇది Selection కోసం, Navigation కోసం కాదు
+                  Positioned(
+                    top: 6,
+                    left: 6,
+                    child: Container(
+                      color: Colors.transparent, // Checkbox background transparent
+                      // Using Checkbox విడ్జెట్, దాని సొంత onTap హ్యాండిల్ చేస్తుంది
+                      child: Checkbox( 
+                        value: item.isSelected,
+                        onChanged: (value) => onToggleSelect(value),
+                        activeColor: AppTheme.primaryColor,
+                        checkColor: Colors.white,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: VisualDensity.compact,
                       ),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+
+            // DETAILS & BUTTONS
+            Padding(
+              padding: EdgeInsets.fromLTRB(12, 12, 12, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (item.displayText != null && item.displayText!.isNotEmpty)
+                    Text(
+                      item.displayText!,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13.sp,
+                        color: Colors.black87,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+
+                  SizedBox(height: 12.h),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildJewelryDetail('Gross Wt.', item.gross),
+                      _buildJewelryDetail('Net Wt.', item.net),
+                    ],
+                  ),
+
+                  SizedBox(height: 8.h),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildJewelryDetail('Stone Wt.', item.stone),
+                      _buildJewelryDetail('Tag', item.tag, color: AppTheme.primaryColor),
+                    ],
+                  ),
+
+                  SizedBox(height: 14.h),
+
+                  // Action Buttons - ఇవి కూడా Navigation నుండి మినహాయించబడ్డాయి
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: onRemove,
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.red.shade300, width: 1.5),
+                            foregroundColor: Colors.red,
+                            padding: EdgeInsets.symmetric(vertical: 10.h),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: Text(
+                            'Remove',
+                            style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(width: 8.w),
+
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: onAddToBag,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryColor,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(vertical: 10.h),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: Text(
+                            'Add to Cart',
+                            style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

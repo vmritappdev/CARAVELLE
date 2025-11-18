@@ -5,7 +5,7 @@ import 'package:caravelle/uittility/conasthan_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
-import 'package:google_fonts/google_fonts.dart';
+
 
 class NewArrivalSection extends StatefulWidget {
   const NewArrivalSection({Key? key}) : super(key: key);
@@ -215,10 +215,11 @@ class _NewArrivalSectionState extends State<NewArrivalSection> {
           SizedBox(height: 8.h),
           Text(
   finalTitle.toUpperCase(),
-  style: GoogleFonts.inter(
+  style: TextStyle(
     fontSize: 10.sp,
     fontWeight: FontWeight.w600,
     color: Colors.black87,
+    //fontFamily: 'Roboto'
   ),
   textAlign: TextAlign.center,
 ),
