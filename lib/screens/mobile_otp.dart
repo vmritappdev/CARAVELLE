@@ -166,7 +166,7 @@ class _MobileNumberScreenState extends State<MobileNumberScreen> {
                   Text(
                     "Enter Your Mobile Number",
                     style: TextStyle(
-                      fontSize: 27.sp,
+                      fontSize: 20.sp,
                       fontWeight: FontWeight.bold,
                       color: AppTheme.primaryColor,
                       letterSpacing: -0.5,
@@ -177,7 +177,7 @@ class _MobileNumberScreenState extends State<MobileNumberScreen> {
                   Text(
                     "We'll send you an OTP for verification",
                     style: TextStyle(
-                      fontSize: 16.sp,
+                      fontSize: 14.sp,
                       color: Colors.black54,
                       height: 1.4,
                     ),
@@ -277,7 +277,7 @@ class _MobileNumberScreenState extends State<MobileNumberScreen> {
                                   border: InputBorder.none,
                                   errorStyle: TextStyle(
                                     color: Colors.red,
-                                    fontSize: 12.sp,
+                                    fontSize: 10.sp,
                                   ),
                                 ),
                                 validator: (value) {

@@ -234,56 +234,24 @@ class _WishlistScreenState extends State<WishlistScreen> {
         elevation: 0,
         title: const Text('Wishlist', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         centerTitle: true,
-        leading: _wishlist.isNotEmpty
-            ? TextButton(
-                onPressed: _toggleSelectAll,
-                child: Text(
-                  _selectAll ? 'Deselect All' : 'Select All',
-                  style: TextStyle(
-                    color: AppTheme.primaryColor,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              )
-            : null,
-        actions: [
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.shopping_cart, color: Colors.black),
-                onPressed: () {
-                  print("🛍️ BAG ICON PRESSED");
-                },
+        leading: null,
+
+      // RIGHT SIDE: Select All button here
+      actions: [
+        if (_wishlist.isNotEmpty)
+          TextButton(
+            onPressed: _toggleSelectAll,
+            child: Text(
+              _selectAll ? 'Deselect All' : 'Select All',
+              style: TextStyle(
+                color: AppTheme.primaryColor,
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
               ),
-              Positioned(
-                right: 8,
-                top: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 14,
-                    minHeight: 14,
-                  ),
-                  child: Text(
-                    '2',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 8.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-          SizedBox(width: 8.w),
-        ],
+      ],
+      
       ),
       
       body: isLoading

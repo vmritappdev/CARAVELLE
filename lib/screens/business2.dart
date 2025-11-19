@@ -510,37 +510,27 @@ SizedBox(height: 20.h),
                             SizedBox(height: 20.h),
                             
                             // Select State Dropdown
-                            _buildPremiumDropdown(
-                              'Select State*', 
-                              Icons.location_on, 
-                              selectedState, 
-                              states, 
-                              (value) {
-                                setState(() {
-                                  selectedState = value;
-                                });
-                                _validateDropdown('state', value);
-                              },
-                              isLoading: _isFetchingPincode,
-                              hasError: fieldErrors['state']!,
-                            ),
-                            SizedBox(height: 20.h),
-                            
-                            // Select City Dropdown
-                            _buildPremiumDropdown(
-                              'Select City*', 
-                              Icons.location_city, 
-                              selectedCity, 
-                              cities, 
-                              (value) {
-                                setState(() {
-                                  selectedCity = value;
-                                });
-                                _validateDropdown('city', value);
-                              },
-                              isLoading: _isFetchingPincode,
-                              hasError: fieldErrors['city']!,
-                            ),
+                            _buildPremiumTextField(
+          'State*', 
+          Icons.map_outlined, 
+          stateController,
+          hint: 'State will auto-fill',
+          readOnly: true,
+          isRequired: true,
+          hasError: fieldErrors['state']!,
+        ),
+        SizedBox(height: 20.h),
+
+        // City Field
+        _buildPremiumTextField(
+          'City*', 
+          Icons.location_city_outlined, 
+          cityController,
+          hint: 'City will auto-fill',
+          readOnly: true,
+          isRequired: true,
+          hasError: fieldErrors['city']!,
+        ),
                             SizedBox(height: 32.h),
                             
                             // Next Button
@@ -762,6 +752,7 @@ SizedBox(height: 20.h),
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
     String hint = '',
+      bool readOnly = false,
     int? maxLength,
     Function(String)? onChanged,
     bool isRequired = false,

@@ -56,7 +56,7 @@ class _JewelryDetailScreenState extends State<JewelryDetailScreen> {
         },
       );
 
-      print('🔹 API URL: https://caravelle.in/barcode/app/barcode_product.php');
+      print('🔹 API URL: ${baseUrl}barcode_product.php');
       print('🔹 Sent Barcode: ${widget.tagNumber}');
       print('🔹 Status Code: ${response.statusCode}');
 
@@ -322,37 +322,7 @@ Text(
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          SizedBox(height: 6),
-                          Row(
-                            children: [
-                              if (widget.offer.originalPrice.isNotEmpty)
-                                Flexible(
-                                  child: Text(
-                                    widget.offer.originalPrice,
-                                    style: TextStyle(
-                                      color: Color(0xFFA0AEC0),
-                                      fontSize: 14, // Reduced from 16
-                                      decoration: TextDecoration.lineThrough,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  widget.offer.discountedPrice.isNotEmpty
-                                      ? widget.offer.discountedPrice
-                                      : widget.offer.originalPrice,
-                                  style: TextStyle(
-                                    color: AppTheme.primaryColor,
-                                    fontSize: 18, // Reduced from 20
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
+                        
                         ],
                       ),
 
@@ -407,7 +377,7 @@ Text(
                               _buildSpecificationRow("Purity", _apiData?['type']?.toString() ?? "18KT"),
                               _buildSpecificationRow("Size", _apiData?['size']?.toString() ?? "Standard"),
                               _buildSpecificationRow("Pieces", formatPieces(_apiData?['pcs'])),
-                              _buildSpecificationRow("HUID", _apiData?['huid']?.toString() ?? "N/A"),
+                            //  _buildSpecificationRow("HUID", _apiData?['huid']?.toString() ?? "N/A"),
                             ],
                           ],
                         ),
