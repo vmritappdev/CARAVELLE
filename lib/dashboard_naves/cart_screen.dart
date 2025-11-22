@@ -1,22 +1,21 @@
 import 'dart:convert';
-import 'package:caravelle/uittility/app_theme.dart'; // Assume this defines AppTheme.primaryColor
-import 'package:caravelle/uittility/conasthan_api.dart'; // Assume this defines baseUrl and token
+import 'package:caravelle/uittility/app_theme.dart';
+import 'package:caravelle/uittility/conasthan_api.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-// --- 1. Data Model for Cart Item ---
 class CartItem {
   final String name;
   final String imageUrl;
   final String? options; 
   
-  final String grossWeight;   // ⬅ API value as String
+  final String grossWeight; 
   final String netWeight;
   final String stoneWeight;
 
   final String tag; 
-  final String id; 
+  final String id; // This is the unique ID (like client_id/API ID) used for cart removal.
   int quantity;
 
   CartItem({
@@ -77,108 +76,169 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   // 🚀 API Fetching Logic
- Future<void> fetchCartItems() async {
-  if (!mounted) return;
+  Future<void> fetchCartItems() async {
+    if (!mounted) return;
 
-  setState(() {
-    isLoading = true;
-    errorMessage = null;
-  });
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
 
-  try {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? mobile = prefs.getString('mobile_number');
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? mobile = prefs.getString('mobile_number');
 
-    if (mobile == null || mobile.isEmpty) {
-      throw Exception("❌ ERROR: No mobile number found in SharedPreferences");
-    }
-
-    print("📱 FETCHING CART - Mobile: $mobile");
-
-    final response = await http.post(
-      Uri.parse("${baseUrl}cart_display.php"),
-      body: {
-        "phone": mobile,
-        "token": token,
-      },
-    );
-
-    print("📊 API RESPONSE STATUS: ${response.statusCode}");
-    print("📄 RAW API RESPONSE BODY: ${response.body}");
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-
-      if (data["response"] == "success" && data["total_data"] is List) {
-        List<dynamic> list = data["total_data"];
-
-        print("🔄 PROCESSING ${list.length} ITEMS FROM API");
-
-        // 👉 FULL PRINT of all items
-        print("🧾 FULL ITEM LIST: ${jsonEncode(list)}");
-
-        // 👉 PRINT EACH ITEM SEPARATELY
-        for (var element in list) {
-          print("🟦 ITEM: ${jsonEncode(element)}");
-        }
-
-        List<CartItem> fetchedItems = list.map((item) {
-          String displayText = _getDisplayText(
-            item["sub_product"]?.toString(),
-            item["product"]?.toString(),
-            item["design"]?.toString(),
-          );
-
-          return CartItem(
-            id: item["id"]?.toString() ?? UniqueKey().toString(),
-            name: displayText,
-            imageUrl: item["image_url"]?.toString().isNotEmpty == true
-                ? item["image_url"].toString()
-                : "assets/images/cara3.png",
-            grossWeight: item["gross"]?.toString() ?? "0.000",
-            netWeight: item["net"]?.toString() ?? "0.000",
-            stoneWeight: item["stone"]?.toString() ?? "0.000",
-            tag: item["barcode"]?.toString() ??
-                item["product_type"]?.toString() ??
-                "N/A",
-            quantity: _parseDouble(item["qty"] ?? 1).toInt(),
-          );
-        }).toList();
-
-        if (mounted) {
-          setState(() {
-            _cartItems = fetchedItems;
-            isLoading = false;
-          });
-        }
-
-        print("✅ CART LOADED SUCCESSFULLY: ${_cartItems.length} items");
-
-      } else {
-        if (mounted) {
-          setState(() {
-            _cartItems = [];
-            isLoading = false;
-            errorMessage = data["message"] ?? "Cart is empty or API response failed.";
-          });
-        }
-        print("⚠️ WARNING: API returned no data or failed response");
+      if (mobile == null || mobile.isEmpty) {
+        throw Exception("❌ ERROR: No mobile number found in SharedPreferences");
       }
-    } else {
-      throw Exception("❌ ERROR: API request failed with status ${response.statusCode}");
-    }
-  } catch (e) {
-    print("❌ EXCEPTION in fetchCartItems(): $e");
 
-    if (mounted) {
-      setState(() {
-        _cartItems = [];
-        isLoading = false;
-        errorMessage = "Failed to load cart. Please try again. Error: ${e.toString()}";
-      });
+      print("📱 FETCHING CART - Mobile: $mobile");
+
+      final response = await http.post(
+        Uri.parse("${baseUrl}cart_display.php"),
+        body: {
+          "phone": mobile,
+          "token": token,
+        },
+      );
+
+      print("📊 API RESPONSE STATUS: ${response.statusCode}");
+      
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        if (data["response"] == "success" && data["total_data"] is List) {
+          List<dynamic> list = data["total_data"];
+
+          print("🔄 PROCESSING ${list.length} ITEMS FROM API");
+
+          List<CartItem> fetchedItems = list.map((item) {
+            String displayText = _getDisplayText(
+              item["sub_product"]?.toString(),
+              item["product"]?.toString(),
+              item["design"]?.toString(),
+            );
+
+            return CartItem(
+              id: item["id"]?.toString() ?? UniqueKey().toString(), // API ID is crucial for removal
+              name: displayText,
+              imageUrl: item["image_url"]?.toString().isNotEmpty == true
+                  ? item["image_url"].toString()
+                  : "assets/images/cara3.png",
+              grossWeight: item["gross"]?.toString() ?? "0.000",
+              netWeight: item["net"]?.toString() ?? "0.000",
+              stoneWeight: item["stone"]?.toString() ?? "0.000",
+              tag: item["barcode"]?.toString() ??
+                  item["product_type"]?.toString() ??
+                  "N/A",
+              quantity: _parseDouble(item["qty"] ?? 1).toInt(),
+            );
+          }).toList();
+
+          if (mounted) {
+            setState(() {
+              _cartItems = fetchedItems;
+              isLoading = false;
+            });
+          }
+
+          print("✅ CART LOADED SUCCESSFULLY: ${_cartItems.length} items");
+
+        } else {
+          if (mounted) {
+            setState(() {
+              _cartItems = [];
+              isLoading = false;
+              errorMessage = data["message"] ?? "Cart is empty or API response failed.";
+            });
+          }
+          print("⚠️ WARNING: API returned no data or failed response");
+        }
+      } else {
+        throw Exception("❌ ERROR: API request failed with status ${response.statusCode}");
+      }
+    } catch (e) {
+      print("❌ EXCEPTION in fetchCartItems(): $e");
+
+      if (mounted) {
+        setState(() {
+          _cartItems = [];
+          isLoading = false;
+          errorMessage = "Failed to load cart. Please try again. Error: ${e.toString()}";
+        });
+      }
     }
   }
-}
+
+  // --- 🌟 సవరించిన addToCart ఫంక్షన్: ఇది CartItem ను తీసుకుంటుంది మరియు API ద్వారా REMOVE చేస్తుంది.
+  Future<void> addToCart(CartItem item) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? mobile = prefs.getString('mobile_number');
+
+      if (mobile == null || mobile.isEmpty) {
+        throw Exception("❌ ERROR: No mobile number found in SharedPreferences");
+      }
+      
+      print("🌐 Calling API for Cart REMOVE - Tag: ${item.tag}, ID: ${item.id}");
+
+      final response = await http.post(
+        Uri.parse("${baseUrl}cart.php"),
+        body: {
+          "phone": mobile,
+          "barcode": item.tag,
+          "id": item.id, 
+          "token": token,
+          // Quantity parameter can be added here if needed for removal/update
+        },
+      );
+
+      print("🛒 Raw Cart Response: ${response.body}");
+
+      final data = json.decode(response.body);
+      String message = data["message"] ?? "Cart status updated.";
+      String snackBarMessage = message;
+
+      // ⭐⭐⭐ API కాల్ తర్వాత స్థానిక జాబితా నుండి అంశాన్ని తొలగించండి ⭐⭐⭐
+      if (message.toUpperCase().contains("REMOVED")) {
+        setState(() {
+          _cartItems.remove(item);
+        });
+        snackBarMessage = "Item successfully removed from cart!";
+      } else if (message.toUpperCase().contains("ADDED")) {
+        snackBarMessage = "Item status update failed (API reported 'Added' instead of 'Removed').";
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.shopping_cart, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  snackBarMessage,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: snackBarMessage.contains("successfully removed") ? Colors.green : Colors.blue,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      print("⚠️ Cart API Error: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to remove item: $e")),
+      );
+    }
+  }
+
 
 // --- Quantity and Removal Methods ---
 
@@ -192,14 +252,12 @@ class _CartScreenState extends State<CartScreen> {
     });
   }
 
+// --- 🌟 సవరించిన _removeItem ఫంక్షన్ - API కాల్ చేస్తుంది ---
   void _removeItem(CartItem item) {
-    setState(() {
-      _cartItems.remove(item);
-    });
-    // ⚠️ TODO: Call API here to remove item from server cart
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${item.name} removed from cart.')),
-    );
+    // API ద్వారా రిమూవ్ చేయండి
+    addToCart(item);
+
+    // స్థానిక జాబితా నుండి తొలగింపు API కాల్ విజయవంతం అయిన తర్వాత addToCart లో జరుగుతుంది.
   }
 
 // --- Build Method (UI) ---
@@ -348,38 +406,35 @@ class _CartScreenState extends State<CartScreen> {
       children: [
         // Delivery Header
         Padding(
-  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-  child: Row(
-    children: [
-      const Text(
-        'Deliver to: ',
-        style: TextStyle(fontSize: 14),
-      ),
-      const Text(
-        'Sai Surya,',
-        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-      ),
-      const Spacer(),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            children: [
+              const Text(
+                'Deliver to: ',
+                style: TextStyle(fontSize: 14),
+              ),
+              const Text(
+                'Sai Surya,',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
 
-    OutlinedButton(
-      onPressed: () {
-        
-      },
-  
-  style: OutlinedButton.styleFrom(
-    side: const BorderSide(color: Colors.black),
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-  ),
-  child: const Text(
-    'CHANGE',
-    style: TextStyle(color: Colors.black, fontSize: 12),
-  ),
-)
-
-    ],
-  ),
-),
-
+              OutlinedButton(
+                onPressed: () {
+                  // Handle Change Address
+                },
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Colors.black),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                ),
+                child: const Text(
+                  'CHANGE',
+                  style: TextStyle(color: Colors.black, fontSize: 12),
+                ),
+              )
+            ],
+          ),
+        ),
 
         const Divider(height: 20, thickness: 1),
 
@@ -393,17 +448,15 @@ class _CartScreenState extends State<CartScreen> {
         ..._cartItems.map((item) => CartItemCard(
               item: item,
               onQuantityChange: _updateQuantity,
-              onDelete: _removeItem,
+              onDelete: _removeItem, // ✅ _removeItem కాల్ అవుతుంది
             )),
-
-     
       ],
     );
   }
 }
 
 // --------------------------------------------------------------------------
-// --- 3. Custom Cart Item Card Widget (UNMODIFIED) ---
+// --- 3. Custom Cart Item Card Widget ---
 // --------------------------------------------------------------------------
 class CartItemCard extends StatelessWidget {
   final CartItem item;
@@ -465,11 +518,11 @@ class CartItemCard extends StatelessWidget {
                   // otherwise keep Image.asset for local assets
                   child: item.imageUrl.startsWith('assets') 
                       ? Image.asset(item.imageUrl, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) {
-                          return const Icon(Icons.broken_image, color: Colors.grey);
-                        })
+                            return const Icon(Icons.broken_image, color: Colors.grey);
+                          })
                       : Image.network(item.imageUrl, fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) {
-                          return const Icon(Icons.link_off, color: Colors.grey);
-                        }),
+                            return const Icon(Icons.link_off, color: Colors.grey);
+                          }),
                 ),
               ),
               const SizedBox(width: 12),
@@ -510,9 +563,9 @@ class CartItemCard extends StatelessWidget {
                         children: [
                           _buildDetailRow('Tag:', item.tag, isBold: true),
                           const Divider(height: 8, thickness: 0.5),
-                        _buildDetailRow('Gross Weight:', '${item.grossWeight} g'),
-_buildDetailRow('Net Weight:', '${item.netWeight} g'),
-_buildDetailRow('Stone Weight:', '${item.stoneWeight} g'),
+                          _buildDetailRow('Gross Weight:', '${item.grossWeight} g'),
+                          _buildDetailRow('Net Weight:', '${item.netWeight} g'),
+                          _buildDetailRow('Stone Weight:', '${item.stoneWeight} g'),
 
                         ],
                       ),
@@ -554,7 +607,7 @@ _buildDetailRow('Stone Weight:', '${item.stoneWeight} g'),
                         IconButton(
                           icon: const Icon(Icons.delete_outline,
                               color: Colors.red, size: 24),
-                          onPressed: () => onDelete(item),
+                          onPressed: () => onDelete(item), // ✅ onDelete కాల్ అవుతుంది
                         ),
                       ],
                     ),
@@ -579,8 +632,3 @@ _buildDetailRow('Stone Weight:', '${item.stoneWeight} g'),
     );
   }
 }
-
-// --------------------------------------------------------------------------
-// --- 4. Coupon Selector Widget (UNMODIFIED) ---
-// --------------------------------------------------------------------------
-

@@ -6,7 +6,7 @@ import 'package:caravelle/caravelle_home_screen_naves/newarravel_section.dart';
 import 'package:caravelle/dashboard_naves/accountscreen.dart';
 import 'package:caravelle/dashboard_naves/18k_14k_categires.dart';
 import 'package:caravelle/caravelle_home_screen_naves/customexclsivedesgin.dart';
-import 'package:caravelle/dashboard_naves/goldshop_offer.dart';
+
 import 'package:caravelle/caravelle_home_screen_naves/exclsive_screen.dart';
 import 'package:caravelle/caravelle_home_screen_naves/follow_us_screen.dart';
 import 'package:caravelle/screens/caravelle_home2.dart';
@@ -578,7 +578,7 @@ Future<List<dynamic>> fetchNewArrivals() async {
 
 
 
-                           Text(
+Text(
   'Gold | CZ | Lab Diamonds',
   style: TextStyle(
     fontSize: 11.sp,
@@ -645,53 +645,16 @@ Widget _goldBox(String title, String type) {
         textAlign: TextAlign.center,
         style: TextStyle(
           color: AppTheme.primaryColor,
-          fontSize: 14.sp, // 🔹 Reduced font size
-          fontWeight: FontWeight.w600,
+          fontSize: 14.sp, 
+             fontFamily: "Inter",   // 🔹 Reduced font size
+          fontWeight: FontWeight.bold,
         ),
       ),
     ),
   );
 }
 
-  Widget _customImageCard(String imagePath, String label) {
-    return Container(
-      margin: EdgeInsets.only(right: 12.w),
-      child: Column(
-        children: [
-          Container(
-            height: 100.h,
-            width: 100.w,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(15.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  blurRadius: 5,
-                  offset: const Offset(2, 3),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(15.r),
-              child: Image.asset(
-                imagePath,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          SizedBox(height: 6.h),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.black87,
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+ 
 
   Widget buildIndicator() => AnimatedSmoothIndicator(
         activeIndex: activeIndex,

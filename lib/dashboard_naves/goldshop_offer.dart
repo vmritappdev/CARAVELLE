@@ -36,6 +36,9 @@ class GoldShopOffersScreen extends StatefulWidget {
 
 class _GoldShopOffersScreenState extends State<GoldShopOffersScreen> {
   final TextEditingController _searchController = TextEditingController();
+
+  final TextEditingController _sizeController = TextEditingController();
+
  
   String _sortBy = "Default";
   bool _sortAscending = true;
@@ -43,10 +46,29 @@ class _GoldShopOffersScreenState extends State<GoldShopOffersScreen> {
   bool isLoading = true;
   bool isLoadingMore = false;
   List<dynamic> totalData = [];
+  
+
+  String? filterSize;
+String? filterStoneType; // "PLAIN" or "STUDDED"
+
+
+
+  
+  // ... existing properties
 
   List<Offer> offers = [];
   int currentPage = 1;
   bool hasMoreData = true;
+  List<Offer> filteredOffers = [];
+  double? filterFromWeight; // ✅ New Property for Filter Range (From)
+  double? filterToWeight;   // ✅ New Property for Filter Range (To)
+
+  // ⭐️ New Controllers for Weight Input Fields in the Filter Sheet
+  final TextEditingController _fromWeightController = TextEditingController();
+  final TextEditingController _toWeightController = TextEditingController();
+  // ... existing properties
+
+ 
 
  String? _mobileNumber;
 Future<void> _loadMobileNumber() async {
@@ -61,18 +83,8 @@ Future<void> _loadMobileNumber() async {
 
 
    List<String> _selectedCategories = [];
-  final List<String> _jewelryCategories = [
-    "Mangalasutra",
-    "Vaddanam", 
-    "Vanki",
-    "Earrings",
-    "Necklace",
-    "Bangles",
-    "Rings",
-    "Bridal Set",
-    "Temple Jewelry",
-  ];
 
+ 
   // Separate controllers for each layout
   final ScrollController _gridScrollController = ScrollController();
   final ScrollController _horizontalScrollController = ScrollController();
@@ -207,8 +219,9 @@ void initState() {
       discountedPrice: item['id']?.toString() ?? '',
       description: item['name']?.toString() ?? '',
       grossWeight: item['gross']?.toString() ?? '',
+      stone: item['stone']?.toString()?? '',
       netWeight: item['net']?.toString() ?? '',
-      size: item['touch']?.toString() ?? '',
+      size: item['size']?.toString() ?? '',
       tagNumber: item['barcode']?.toString() ?? '',
       status: item['status']?.toString() ?? '',
       subproduct: item['sub_product']?.toString() ?? '',
@@ -298,10 +311,11 @@ Future<void> fetchFullBestSellerData() async {
               title: item['name'] ?? "",
               originalPrice: item['design'] ?? "",
             discountedPrice: item['id']?.toString() ?? '',
+             stone: item['stone']?.toString()?? '',
               description: item['product'] ?? "",
               grossWeight: item['gross'] ?? "",
               netWeight: item['net'] ?? "",
-              size: item['touch'] ?? "",
+              size: item['size'] ?? "",
               tagNumber: item['barcode'] ?? "",
               status: item['status'] ?? "",
               subproduct: item['sub_product'] ?? "",
@@ -371,11 +385,12 @@ Future<void> fetchExclusiveCollectionData() async {
               imagePath: item['image_url'] ?? "",
               title: item['name'] ?? "",
               originalPrice: item['design'] ?? "",
+               stone: item['stone']?.toString()?? '',
              discountedPrice: item['id']?.toString() ?? '',
               description: item['product'] ?? "",
               grossWeight: item['gross'] ?? "",
               netWeight: item['net'] ?? "",
-              size: item['touch'] ?? "",
+              size: item['size'] ?? "",
               tagNumber: item['barcode'] ?? "",
               status: item['status'] ?? "",
               subproduct: item['sub_product'] ?? "",
@@ -447,11 +462,12 @@ Future<void> fetchNewArrivalData() async {
               imagePath: item['image_url'] ?? "",
               title: item['name'] ?? "",
               originalPrice: item['design'] ?? "",
+               stone: item['stone']?.toString()?? '',
              discountedPrice: item['id']?.toString() ?? '',
               description: item['product'] ?? "",
               grossWeight: item['gross'] ?? "",
               netWeight: item['net'] ?? "",
-              size: item['touch'] ?? "",
+              size: item['size'] ?? "",
               tagNumber: item['barcode'] ?? "",
               status: item['status'] ?? "",
               subproduct: item['sub_product'] ?? "",
@@ -523,11 +539,12 @@ Future<void> fetchCatalogueProductsData() async {
               imagePath: item['image_url'] ?? "",
               title: item['name'] ?? "",
               originalPrice: item['design'] ?? "",
+               stone: item['stone']?.toString()?? '',
               discountedPrice: item['id']?.toString() ?? '',
               description: item['product'] ?? "",
               grossWeight: item['gross'] ?? "",
               netWeight: item['net'] ?? "",
-              size: item['touch'] ?? "",
+              size: item['size'] ?? "",
               tagNumber: item['barcode'] ?? "",
               status: item['status'] ?? "",
               subproduct: item['sub_product'] ?? "",
@@ -730,26 +747,30 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
 }
 
 
-  double _parseWeight(String weight) {
-    if (weight.isEmpty) return 0.0;
-    String cleanWeight = weight.replaceAll('g', '').trim();
-    return double.tryParse(cleanWeight) ?? 0.0;
-  }
+ double _parseWeight(String weight) {
+  if (weight.isEmpty) return 0.0;
 
- List<Offer> get _filteredOffers {
+  // Remove all non-numeric and decimal characters
+  String cleanWeight = weight.replaceAll(RegExp(r'[^0-9.]'), '');
+
+  return double.tryParse(cleanWeight) ?? 0.0;
+}
+
+
+List<Offer> get _filteredOffers {
   List<Offer> filtered = List.from(offers);
-  
-  // ✅ Search filter - first 2 letters enter chesinappude work avutundi
+
+  // 🔍 Search filter
   if (_searchController.text.isNotEmpty && _searchController.text.length >= 2) {
     final searchTerm = _searchController.text.toLowerCase();
-    filtered = filtered.where((offer) => 
-      offer.title.toLowerCase().contains(searchTerm) ||
-      offer.description.toLowerCase().contains(searchTerm) ||
-      (offer.subproduct?.toLowerCase().contains(searchTerm) ?? false)
+    filtered = filtered.where((offer) =>
+        (offer.title.toLowerCase().contains(searchTerm)) ||
+        (offer.description.toLowerCase().contains(searchTerm)) ||
+        (offer.subproduct?.toLowerCase().contains(searchTerm) ?? false)
     ).toList();
   }
-  
-  // Category filter
+
+  // 🎯 Category Filter
   if (_selectedCategories.isNotEmpty) {
     filtered = filtered.where((offer) {
       for (String category in _selectedCategories) {
@@ -761,8 +782,55 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
       return false;
     }).toList();
   }
-  
-  // Sort logic
+
+
+  // ⭐ SIZE FILTER (offer.size)
+if (filterSize != null && filterSize!.isNotEmpty) {
+  double? typedSize = double.tryParse(filterSize!); // User typed
+  if (typedSize == null) {
+    // Invalid size → no products
+    filtered = [];
+  } else {
+    filtered = filtered.where((offer) {
+      double offerSize = double.tryParse(offer.size?.toString() ?? "0") ?? 0.0;
+      
+      // ⭐ Compare after removing decimal variations
+      return offerSize.round() == typedSize.round();
+    }).toList();
+  }
+}
+
+
+
+  // ⭐ Correct Gross Weight Range Filter ⭐
+  if (filterFromWeight != null && filterToWeight != null) {
+    final double minWeight = filterFromWeight!;
+    final double maxWeight = filterToWeight!;
+
+    filtered = filtered.where((offer) {
+      double itemWeight = _parseWeight(offer.grossWeight ?? "0");
+      return itemWeight >= minWeight && itemWeight <= maxWeight;
+    }).toList();
+  }
+
+  // ⭐ DESIGN TYPE FILTER using offer.stone
+// ⭐ DESIGN TYPE FILTER using offer.stone
+if (filterStoneType != null && filterStoneType!.isNotEmpty) {
+  filtered = filtered.where((offer) {
+    double stoneValue = double.tryParse(offer.stone?.toString() ?? "0") ?? 0;
+
+    if (filterStoneType == "Plain") {
+      return stoneValue <= 0;  // No stones ✔
+    } else if (filterStoneType == "Studded with Stones") {
+      return stoneValue > 0;  // Has stones ✔
+    }
+    return true;
+  }).toList();
+}
+
+
+
+  // 🔄 Sorting
   if (_sortBy == "Weight") {
     filtered.sort((a, b) {
       double weightA = _parseWeight(a.grossWeight ?? "0");
@@ -776,7 +844,7 @@ void _navigateToDetailScreen(BuildContext context, Offer offer) {
       return _sortAscending ? indexA.compareTo(indexB) : indexB.compareTo(indexA);
     });
   }
-  
+
   return filtered;
 }
   void _showLayoutOptionsSheet(BuildContext context) {
@@ -1356,8 +1424,12 @@ _buildIconButton(
                         children: [
                           _buildDetailRow("Gross Weight", offer.grossWeight ?? "N/A"),
                           _buildDetailRow("Net Weight", offer.netWeight ?? "N/A"),
-                          if (offer.size != null && offer.size!.isNotEmpty)
-                            _buildDetailRow("Size", offer.size!),
+                         if (offer.size != null && offer.size!.isNotEmpty) 
+  _buildDetailRow(
+    "Size", 
+    offer.size!.replaceAll(".000", "")
+  ),
+
                           if (offer.tagNumber != null && offer.tagNumber!.isNotEmpty)
                             _buildDetailRow("Tag Number", offer.tagNumber!),
                         ],
@@ -1496,7 +1568,9 @@ _buildIconButton(
                         if (offer.grossWeight != null) _buildSmallDetailText("Gross: ${offer.grossWeight}"),
                         if (offer.netWeight != null) _buildSmallDetailText("Net: ${offer.netWeight}"),
                         if (offer.tagNumber != null) _buildSmallDetailText("Tag: ${offer.tagNumber}"),
-                        if (offer.size != null) _buildSmallDetailText("Size: ${offer.size}"),
+                        if (offer.size != null && offer.size!.isNotEmpty)
+  _buildSmallDetailText("Size: ${offer.size!.replaceAll(".000", "")}"),
+
                       ],
                     ),
                   ],
@@ -1638,7 +1712,11 @@ _buildIconButton(
                       children: [
                         _buildDetailRow("Gross Weight", offer.grossWeight ?? "N/A"),
                         _buildDetailRow("Net Weight", offer.netWeight ?? "N/A"),
-                        if (offer.size != null) _buildDetailRow("Size", offer.size!),
+                        if (offer.size != null && offer.size!.isNotEmpty) 
+  _buildDetailRow(
+    "Size", 
+    offer.size!.replaceAll(".000", "")
+  ),
                         if (offer.tagNumber != null) _buildDetailRow("Tag Number", offer.tagNumber!),
                       ],
                     ),
@@ -1746,15 +1824,7 @@ Widget _buildSmallIconButton(
 
  
 
-  void _addToCart(Offer offer) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Row(children: [
-        Icon(Icons.check_circle, color: Colors.white, size: 20), SizedBox(width: 8),
-        Expanded(child: Text("${offer.title} added to cart", style: TextStyle(color: Colors.white, fontSize: 14))),
-      ]),
-      backgroundColor: Colors.green, duration: Duration(seconds: 2),
-    ));
-  }
+ 
 
   
 
@@ -1762,7 +1832,7 @@ Widget _buildSmallIconButton(
  
 
  
-
+/*
 
   // Filter Bottom Sheet method would go here...
   void _showFilterBottomSheet(BuildContext context) {
@@ -1827,6 +1897,8 @@ Widget _buildSmallIconButton(
                   ),
                   
                   // Search Bar
+
+                  /*
                   Padding(
                     padding: EdgeInsets.all(16),
                     child: Container(
@@ -1845,8 +1917,11 @@ Widget _buildSmallIconButton(
                       ),
                     ),
                   ),
-                  
+                  */
                   // Section Title
+
+
+                  /*
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: Align(
@@ -1861,9 +1936,13 @@ Widget _buildSmallIconButton(
                       ),
                     ),
                   ),
+                  */
                   SizedBox(height: 16.h),
                   
                   // Categories List with Checkboxes - 2 columns layout
+
+
+                  
                   Expanded(
                     child: SingleChildScrollView(
                       padding: EdgeInsets.symmetric(horizontal: 16),
@@ -1871,6 +1950,8 @@ Widget _buildSmallIconButton(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Categories Grid
+
+                          /*
                           GridView.builder(
                             shrinkWrap: true,
                             physics: NeverScrollableScrollPhysics(),
@@ -1922,8 +2003,8 @@ Widget _buildSmallIconButton(
                               );
                             },
                           ),
-
-                          SizedBox(height: 24.h),
+                         */
+                         // SizedBox(height: 24.h),
 
                           // NEW: Weight Range Section
                           Container(
@@ -2230,6 +2311,357 @@ Widget _buildSmallIconButton(
     },
   );
 }
+
+*/
+
+
+
+
+// **ఈ కొత్త ఫంక్షన్‌ను _GoldShopOffersScreenState క్లాస్‌లో చేర్చండి**
+void _showFilterBottomSheet(BuildContext context) {
+  // Load existing weight filter values
+  if (filterFromWeight != null) {
+    _fromWeightController.text = filterFromWeight!.toString();
+  } else {
+    _fromWeightController.clear();
+  }
+
+  if (filterToWeight != null) {
+    _toWeightController.text = filterToWeight!.toString();
+  } else {
+    _toWeightController.clear();
+  }
+
+  // NEW fields
+  
+  String _selectedDesignType = "";
+  final List<String> _designTypes = ["Plain", "Studded with Stones"];
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setStateSheet) {
+          return SafeArea(
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.70,
+              padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: Column(
+                  mainAxisSize: MainAxisSize.min, // ⭐ Auto expand
+                children: [
+                  // HEADER
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: Colors.grey.shade200),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("Filter Options",
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF2D3748))),
+                        IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: Icon(Icons.close, color: Colors.grey))
+                      ],
+                    ),
+                  ),
+
+                  // BODY
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ⭐ OLD SECTION — WEIGHT FILTER
+                          Text("Gross Weight (g)",
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF2D3748))),
+                          SizedBox(height: 10),
+                          Row(
+                            children: [
+                             Expanded(
+  child: TextField(
+    controller: _fromWeightController,
+    keyboardType: TextInputType.number,
+    decoration: InputDecoration(
+      labelText: "From (g)",labelStyle: TextStyle(fontSize: 9),
+      isDense: true, // 🔥 Height తగ్గుతుంది
+      contentPadding: EdgeInsets.symmetric(
+        vertical: 10, // 🔥 Height నియంత్రణ
+        horizontal: 12,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+
+        // 🔥 Focus Border = PRIMARY COLOR
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(
+          color: AppTheme.primaryColor, // ⭐ PRIMARY COLOR
+          width: 2,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+    ),
+  ),
+),
+
+                              SizedBox(width: 16),
+                            Expanded(
+  child: TextField(
+    controller: _toWeightController,
+    keyboardType: TextInputType.number,
+    decoration: InputDecoration(
+      labelText: "To (g)",labelStyle: TextStyle(fontSize: 9),
+      isDense: true,
+      contentPadding: EdgeInsets.symmetric(
+        vertical: 10,
+        horizontal: 12,
+      ),
+
+      // 🔥 Normal Border
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+
+      // 🔥 Focus Border = PRIMARY COLOR
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(
+          color: AppTheme.primaryColor, // ⭐ PRIMARY COLOR
+          width: 2,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+    ),
+  ),
+)
+
+                            ],
+                          ),
+
+                          SizedBox(height: 25),
+/*
+                          // ⭐ NEW SECTION — SIZE SLIDER
+                 Container(
+  padding: EdgeInsets.all(16),
+  decoration: BoxDecoration(
+    color: Colors.grey.shade50,
+    borderRadius: BorderRadius.circular(12),
+    border: Border.all(color: Colors.grey.shade200),
+  ),
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        "Size",
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+
+      SizedBox(height: 10),
+
+      TextField(
+        controller: _sizeController,
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(
+          hintText: "Enter Size",
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(
+              color: AppTheme.primaryColor,
+              width: 2,
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      ),
+    ],
+  ),
+),
+
+*/
+                          SizedBox(height: 25),
+
+                          // ⭐ NEW SECTION — DESIGN TYPE
+                          Container(
+                            padding: EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade200)),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Design Type",
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600)),
+                                SizedBox(height: 12),
+                                Row(
+                                  children: _designTypes.map((type) {
+                                    bool selected = _selectedDesignType == type;
+                                    return Expanded(
+                                      child: GestureDetector(
+                                        onTap: () {
+                                          setStateSheet(() {
+                                            _selectedDesignType = type;
+                                          });
+                                        },
+                                        child: Container(
+                                          margin: EdgeInsets.symmetric(horizontal: 4),
+                                          padding: EdgeInsets.symmetric(
+                                              vertical: 12, horizontal: 8),
+                                          decoration: BoxDecoration(
+                                              color: selected
+                                                  ? AppTheme.primaryColor
+                                                  : Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                  color: selected
+                                                      ? AppTheme.primaryColor
+                                                      : Colors.grey.shade300)),
+                                          child: Text(
+                                            type,
+                                            textAlign: TextAlign.center,
+                                            
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: selected
+                                                  ? Colors.white
+                                                  : Color(0xFF2D3748),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                )
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // FOOTER
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 10,
+                              offset: Offset(0, -5))
+                        ]),
+                    child: Row(
+                      children: [
+                        // Reset
+                      Expanded(
+  child: OutlinedButton(
+    onPressed: () {
+      setState(() {
+        filterFromWeight = null;
+        filterToWeight = null;
+        filterSize = null;            // ⭐ Add
+        filterStoneType = null;       // ⭐ Add
+        _selectedDesignType = "";     // UI selection reset
+
+        _fromWeightController.clear();
+        _toWeightController.clear();
+        _sizeController.clear();
+      });
+
+      Navigator.pop(context);
+    },
+    style: OutlinedButton.styleFrom(
+      side: BorderSide(color: AppTheme.primaryColor),
+    ),
+    child: Text(
+      "Reset",
+      style: TextStyle(color: AppTheme.primaryColor),
+    ),
+  ),
+),
+
+                        SizedBox(width: 16),
+                  Expanded(
+  child: ElevatedButton(
+    onPressed: () {
+      setState(() {
+        // Weight Filter
+        filterFromWeight =
+            double.tryParse(_fromWeightController.text.trim());
+        filterToWeight =
+            double.tryParse(_toWeightController.text.trim());
+
+        // Size Filter
+        filterSize = _sizeController.text.trim();
+
+        // Design Type Filter
+        filterStoneType = _selectedDesignType;
+      });
+
+      // ⭐ IMPORTANT: Filter apply UI refresh here
+      setState(() {});
+
+      // Close BottomSheet
+      Navigator.pop(context);
+    },
+    style: ElevatedButton.styleFrom(
+      backgroundColor: AppTheme.primaryColor,
+    ),
+    child: Text(
+      "Apply Filter",
+      style: TextStyle(color: Colors.white),
+    ),
+  ),
+),
+
+                      ],
+                    ),
+                  )
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+
+
+
   }
 
 

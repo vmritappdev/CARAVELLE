@@ -190,19 +190,7 @@ class _BusinessFormState extends State<BusinessForm> {
   }
 
   // Validate dropdown fields
-  void _validateDropdown(String fieldName, String? value) {
-    setState(() {
-      switch (fieldName) {
-        case 'state':
-          fieldErrors['state'] = value == null || value.isEmpty;
-          break;
-        case 'city':
-          fieldErrors['city'] = value == null || value.isEmpty;
-          break;
-      }
-    });
-  }
-
+  
   Future<void> _submitForm() async {
     if (!_validateRequiredFields()) return;
 
@@ -856,125 +844,7 @@ SizedBox(height: 20.h),
     );
   }
 
-  Widget _buildPremiumDropdown(
-    String label,
-    IconData icon,
-    String? value,
-    List<String> items,
-    Function(String?) onChanged, {
-    bool isLoading = false,
-    bool hasError = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              label.replaceAll('*', '').trim(),
-              style: TextStyle(
-                fontSize: AppTheme.subHeaderSize,
-                fontWeight: FontWeight.w600,
-                color: textPrimary,
-              ),
-            ),
-            SizedBox(width: 4.w),
-            Text(
-              '*',
-              style: TextStyle(
-                fontSize: AppTheme.subHeaderSize,
-                fontWeight: FontWeight.w600,
-                color: Colors.red,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 8.h),
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Container(
-            height: 56.h,
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: hasError ? errorColor : (value == null ? Colors.grey.shade200 : primaryColor),
-                width: hasError ? 2 : (value == null ? 1.5 : 2),
-              ),
-            ),
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: value,
-                  isExpanded: true,
-                  icon: isLoading 
-                      ? SizedBox(
-                          width: 20.w,
-                          height: 20.w,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
-                          ),
-                        )
-                      : Icon(Icons.arrow_drop_down, color: hasError ? errorColor : primaryColor, size: 24.w),
-                  hint: Row(
-                    children: [
-                      Icon(icon, color: hasError ? errorColor : AppTheme.primaryColor, size: 20.w),
-                      SizedBox(width: 12.w),
-                      Text(
-                        isLoading ? "Loading..." : label,
-                        style: TextStyle(
-                          fontSize: AppTheme.subHeaderSize,
-                          fontWeight: FontWeight.w300,
-                          color: hasError ? errorColor : Colors.grey.shade400,
-                        ),
-                      ),
-                    ],
-                  ),
-                  items: items.map((item) {
-                    return DropdownMenuItem<String>(
-                      value: item,
-                      child: Text(
-                        item,
-                        style: TextStyle(
-                          fontSize: AppTheme.fontSize,
-                          color: textPrimary,
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: isLoading ? null : onChanged,
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (hasError)
-          Padding(
-            padding: EdgeInsets.only(top: 4.h),
-            child: Text(
-              'This field is required',
-              style: TextStyle(
-                fontSize: AppTheme.fontSize - 2,
-                color: errorColor,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
+ 
   Widget _buildPremiumButton() {
     return Container(
       width: double.infinity,

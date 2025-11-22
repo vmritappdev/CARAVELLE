@@ -9,13 +9,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+// ⚠️ గమనిక: 'baseUrl', 'token', 'AppTheme.primaryColor', 'WishlistItem' మోడల్స్ 
+// మరియు 'Offer' మోడల్ మీ ప్రాజెక్ట్‌లో సరిగ్గా నిర్వచించబడి ఉండాలి.
+
 // --- Sample Wishlist Data ---
 final List<WishlistItem> dummyWishlist = [];
 
 bool isLoading = false;
 
-// ⚠️ గమనిక: 'baseUrl', 'token', 'AppTheme.primaryColor', 'WishlistItem' మోడల్స్ 
-// మరియు 'Offer' మోడల్ మీ ప్రాజెక్ట్‌లో సరిగ్గా నిర్వచించబడి ఉండాలి.
 
 class WishlistScreen extends StatefulWidget {
   const WishlistScreen({super.key});
@@ -30,13 +31,36 @@ class _WishlistScreenState extends State<WishlistScreen> {
 
   int get _selectedCount => _wishlist.where((item) => item.isSelected).length;
 
-  void _removeItem(WishlistItem item) {
+  // 🌟 సవరించిన _removeItem ఫంక్షన్ - ఇది API ద్వారా రిమూవ్ చేస్తుంది
+  void _removeItem(WishlistItem item) async {
+    // 1. WishlistItem ను API కాల్ కోసం Offer మోడల్‌గా మ్యాప్ చేయండి
+    final offer = Offer(
+      imagePath: item.imageUrl,
+      title: item.displayText ?? item.brandName,
+      tagNumber: item.tag,
+      grossWeight: item.gross,
+      netWeight: item.net,
+      description: '',
+      stone: '',
+      // 'id' ఫీల్డ్‌కి మ్యాపింగ్ చేయండి. మీ API కి ID అవసరం
+      discountedPrice: '', // లేదా item.id (మీ WishlistItem మోడల్‌లో id ఉంటే)
+      whish: 'YES', // ఇది ప్రస్తుతం wishlist లో ఉందని సూచించడానికి
+      originalPrice: '',
+    );
+
+    print("🗑️ REMOVING ITEM VIA API - Tag: ${item.tag}");
+
+    // 2. API ద్వారా రిమూవ్ ఫంక్షన్ కాల్ చేయండి (isRemove: true తో)
+    await addToWishlist(offer, isRemove: true);
+
+    // 3. స్థానిక జాబితా నుండి అంశాన్ని తొలగించండి (API కాల్ విజయవంతం అయిన తర్వాత)
     setState(() {
       _wishlist.remove(item);
+      // selectAll స్థితిని కూడా అప్‌డేట్ చేయండి
+      _selectAll = _wishlist.isNotEmpty && _wishlist.every((i) => i.isSelected);
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${item.brandName} removed from wishlist.')),
-    );
+
+    // fetchWishlistItems(); // అవసరమైతే జాబితాను రిఫ్రెష్ చేయండి
   }
 
   void _toggleSelection(WishlistItem item, bool? value) {
@@ -86,7 +110,8 @@ class _WishlistScreenState extends State<WishlistScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${item.brandName} added to bag!')),
     );
-    _removeItem(item);
+    // Bag కు యాడ్ చేసిన తర్వాత Wishlist నుండి రిమూవ్ చేయవచ్చు
+    _removeItem(item); 
   }
 
   String _getDisplayText(String? subProduct, String? product, String? design) {
@@ -134,7 +159,6 @@ class _WishlistScreenState extends State<WishlistScreen> {
       );
 
       print("📊 API RESPONSE STATUS: ${response.statusCode}");
-      print("📄 RAW RESPONSE LENGTH: ${response.body.length} characters"); // DEBUG PRINT
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -190,6 +214,48 @@ class _WishlistScreenState extends State<WishlistScreen> {
     }
   }
 
+  // 🌟 addToWishlist ఫంక్షన్ - ఇది API ద్వారా ADD/REMOVE చేస్తుంది
+  Future<void> addToWishlist(Offer offer, {bool isRemove = false}) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? mobile = prefs.getString('mobile_number');
+
+      if (mobile == null || mobile.isEmpty) {
+        print("❌ ERROR: No mobile number found");
+        return;
+      }
+
+      print("🌐 Calling API for Whitelist ${isRemove ? 'REMOVE' : 'ADD'} - Tag: ${offer.tagNumber}");
+
+      final response = await http.post(
+        Uri.parse("${baseUrl}whislist.php"),
+        body: {
+          "phone": mobile,
+          "barcode": offer.tagNumber,
+          "id": offer.discountedPrice, // 'id' ఫీల్డ్
+          "token": token,
+          "action": isRemove ? "REMOVE" : "ADD"
+        },
+      );
+
+      final data = json.decode(response.body);
+      String message = data["message"] ?? (isRemove ? "Removed from Wishlist" : "Added to Wishlist");
+
+      // ఈ స్క్రీన్ లో Offer మోడల్ ఉపయోగించబడనప్పటికీ, మీరు setState ని ఉపయోగించవచ్చు
+      // Offer మోడల్ యొక్క 'whish' స్థితిని అప్డేట్ చేయాల్సిన అవసరం లేదు.
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+
+    } catch (e) {
+      print("⚠️ ERROR in addToWishlist(): $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to update wishlist status: $e")),
+      );
+    }
+  }
+
   void _navigateToDetailScreen(BuildContext context, WishlistItem item) {
     // WishlistItem ను Offer మోడల్‌గా మార్చడం (Mapping WishlistItem to Offer)
     final offer = Offer(
@@ -199,6 +265,7 @@ class _WishlistScreenState extends State<WishlistScreen> {
       grossWeight: item.gross,
       netWeight: item.net,
       description: '', 
+      stone: '',
       discountedPrice: '',
       whish: '',
       originalPrice: '',
@@ -277,10 +344,9 @@ class _WishlistScreenState extends State<WishlistScreen> {
                       final item = _wishlist[index];
                       return WishlistProductCard(
                         item: item,
-                        onRemove: () => _removeItem(item),
+                        onRemove: () => _removeItem(item), // ✅ _removeItem కాల్ అవుతుంది
                         onAddToBag: () => _addToBag(item),
                         onToggleSelect: (value) => _toggleSelection(item, value),
-                        // ⭐️ ఇక్కడ onTap ఫంక్షన్‌ను పాస్ చేస్తున్నాము
                         onTap: () => _navigateToDetailScreen(context, item),
                       );
                     },
@@ -321,7 +387,7 @@ class WishlistProductCard extends StatelessWidget {
   final VoidCallback onRemove;
   final VoidCallback onAddToBag;
   final Function(bool?) onToggleSelect;
-  final VoidCallback? onTap; // ✅ Tap callback for navigation
+  final VoidCallback? onTap; 
 
   const WishlistProductCard({
     super.key,
@@ -329,7 +395,7 @@ class WishlistProductCard extends StatelessWidget {
     required this.onRemove,
     required this.onAddToBag,
     required this.onToggleSelect,
-    this.onTap, // ✅ Added onTap to constructor
+    this.onTap,
   });
 
   Widget _buildJewelryDetail(String label, String value, {Color? color}) {
@@ -360,7 +426,7 @@ class WishlistProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     // ⭐️ మొత్తం కార్డ్ కంటైనర్‌ను GestureDetector తో చుట్టాము
     return GestureDetector(
-      onTap: onTap, // ✅ కార్డ్ మీద ఎక్కడ క్లిక్ చేసినా (బటన్స్/చెక్‌బాక్స్ మినహా) నావిగేట్ అవుతుంది.
+      onTap: onTap, 
       onLongPress: () => onToggleSelect(!item.isSelected), // Long Press తో సెలెక్ట్
       child: Container(
         decoration: BoxDecoration(
@@ -423,13 +489,12 @@ class WishlistProductCard extends StatelessWidget {
                       ),
                     ),
 
-                  // CHECKBOX (top left) - ఇది Selection కోసం, Navigation కోసం కాదు
+                  // CHECKBOX (top left)
                   Positioned(
                     top: 6,
                     left: 6,
                     child: Container(
-                      color: Colors.transparent, // Checkbox background transparent
-                      // Using Checkbox విడ్జెట్, దాని సొంత onTap హ్యాండిల్ చేస్తుంది
+                      color: Colors.transparent, 
                       child: Checkbox( 
                         value: item.isSelected,
                         onChanged: (value) => onToggleSelect(value),
@@ -484,18 +549,18 @@ class WishlistProductCard extends StatelessWidget {
 
                   SizedBox(height: 14.h),
 
-                  // Action Buttons - ఇవి కూడా Navigation నుండి మినహాయించబడ్డాయి
+                  // Action Buttons
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: onRemove,
+                          onPressed: onRemove, // ✅ Remove button click calls onRemove
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(color: Colors.red.shade300, width: 1.5),
                             foregroundColor: Colors.red,
                             padding: EdgeInsets.symmetric(vertical: 10.h),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8)),
+                            borderRadius: BorderRadius.circular(8)),
                           ),
                           child: Text(
                             'Remove',

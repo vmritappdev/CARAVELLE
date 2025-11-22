@@ -1,9 +1,15 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:caravelle/caravelle_home_screen_naves/custom_size.dart';
 import 'package:caravelle/uittility/app_theme.dart';
+import 'package:caravelle/uittility/conasthan_api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http_parser/http_parser.dart';
+
 
 // --- Theme Colors ---
 const Color _kPrimaryColor = AppTheme.primaryColor;
@@ -27,9 +33,10 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
   final _lengthController = TextEditingController();
   final _clarityController = TextEditingController();
   final _weightController = TextEditingController();
-  final _sizeController = TextEditingController();
+ 
   final _remarksController = TextEditingController();
   final _quantityController = TextEditingController();
+   final _productController = TextEditingController();
 
   String _selectedGold = '';
   String _selectedCategory = '';
@@ -38,6 +45,8 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
   String _selectedStone = '';
   String _selectedClarity = '';
   String _selectedColor = '';
+
+   bool isLoading = true;
 
   final List<String> _goldOptions = ['9K', '14K', '18K', '22K'];
   final List<String> _categoryOptions = ['CZ', 'Plain', 'Lab diamond'];
@@ -58,6 +67,14 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
   bool _showCategoryError = false;
   bool _showPurityError = false;
 
+
+  String? selectedSize;
+
+
+
+
+
+
   @override
   void initState() {
     super.initState();
@@ -67,11 +84,11 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
   }
 
   // --- Pick image ---
-  Future<void> _pickImage(ImageSource source) async {
-    final pickedImage = await _picker.pickImage(source: source);
-    if (pickedImage != null) {
+ Future<void> _pickImage(ImageSource source) async {
+    final XFile? pickedFile = await _picker.pickImage(source: source);
+    if (pickedFile != null) {
       setState(() {
-        _image = pickedImage;
+        _image = pickedFile;
       });
     }
   }
@@ -79,33 +96,29 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
   void _showImageSourceDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Select Image Source', style: TextStyle(color: _kPrimaryColor)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.camera_alt, color: _kPrimaryColor),
-              title: Text('Camera'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.camera);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.photo_library, color: _kPrimaryColor),
-              title: Text('Gallery'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.gallery);
-              },
-            ),
-          ],
-        ),
+      builder: (ctx) => AlertDialog(
+        title: Text('Select Image'),
+        content: Text('Choose from Camera or Gallery'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _pickImage(ImageSource.camera);
+            },
+            child: Text('Camera'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _pickImage(ImageSource.gallery);
+            },
+            child: Text('Gallery'),
+          ),
+        ],
       ),
     );
   }
-
+  
   // --- TextField Helper with Red Star ---
   Widget _buildTextField(
   TextEditingController controller,
@@ -119,35 +132,36 @@ class _CustomizationScreenState extends State<CustomizationScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // 🖤 Label text (black)
-        if (required)
-          RichText(
-            text: TextSpan(
-              text: labelText,
-              style: const TextStyle(
-                color: Colors.black, // ✅ label text black
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-              ),
-              children: const [
-                TextSpan(
-                  text: ' *',
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          Text(
-            labelText,
-            style: const TextStyle(
-              color: Colors.black, // ✅ black label text
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-            ),
+       if (required)
+  RichText(
+    text: TextSpan(
+      text: labelText,
+      style: TextStyle(
+        color: Colors.black,
+        fontSize: labelText == "Quantity" ? 12 : 15, // ⭐ Only Quantity smaller
+        fontWeight: FontWeight.bold,
+      ),
+      children: const [
+        TextSpan(
+          text: ' *',
+          style: TextStyle(
+            color: Colors.red,
+            fontSize: 16,
           ),
+        ),
+      ],
+    ),
+  )
+else
+  Text(
+    labelText,
+    style: TextStyle(
+      color: Colors.black,
+      fontSize: labelText == "Quantity" ? 9 : 11, // ⭐ Only Quantity smaller
+      fontWeight: FontWeight.w800,
+    ),
+  ),
+
 
         const SizedBox(height: 6),
 
@@ -216,12 +230,7 @@ bool _validateFields() {
 }
 
   // --- Place Custom Order ---
-  void _placeOrder() {
-    if (_validateFields()) {
-      print('Order placed successfully!');
-      // Add your order placement logic here
-    }
-  }
+  
 
   bool _isAssetImage(String path) {
     return !path.contains('/') || path.startsWith('assets/');
@@ -233,8 +242,8 @@ bool _validateFields() {
       text: TextSpan(
         text: text,
         style: TextStyle(
-          fontSize: 16, 
-          fontWeight: FontWeight.w600,
+          fontSize: 11.sp, 
+          fontWeight: FontWeight.w800,
           color: _kTextColor,
         ),
         children: [
@@ -246,6 +255,138 @@ bool _validateFields() {
       ),
     );
   }
+
+
+Future<void> _submitOrder() async {
+  if (_image == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Please select an image!"),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 3),
+      ),
+    );
+    return;
+  }
+
+  setState(() => isLoading = true);
+
+  final url = Uri.parse("${baseUrl}save_orders.php");
+
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String? mobile = prefs.getString('mobile_number');
+
+  if (mobile == null || mobile.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("No mobile number found!"),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 3),
+      ),
+    );
+    setState(() => isLoading = false);
+    return;
+  }
+
+  try {
+    // Create MultipartRequest
+    var request = http.MultipartRequest('POST', url);
+
+    // Add text fields
+    request.fields.addAll({
+      "token": token,
+      "phone": mobile,
+      "cname": "",
+      "pname": _productController.text,
+      "gst": "",
+      "pan": "",
+      "aadhaar": "",
+      "product": _productController.text,
+      "type": _selectedCategory,
+      "barcode": "",
+      "purity": _selectedGold,
+      "size": selectedSize ?? '',
+      "color": _selectedGoldColor,
+      "length": _lengthController.text,
+      "weight": _weightController.text,
+      "qty": _quantityController.text,
+      "remarks": _remarksController.text,
+      "clarity": _selectedClarity,
+      "stone_color": _selectedColor,
+      "stone_type": _selectedStone,
+      "certification": _selectedCertification,
+      "carat": _clarityController.text,
+    });
+
+    // Debug prints to check what values are being sent
+    print("\n📌 Sending Data to API:");
+    request.fields.forEach((key, value) {
+      print("➡️ $key : ${value.isEmpty ? "❌ EMPTY" : value}");
+    });
+    if (_image != null) print("📷 Image file: ${_image!.path}");
+    print("--------------------------------------------------");
+
+    // Add image file
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'image', // name expected by backend
+        _image!.path,
+        contentType: MediaType('image', 'jpeg'), // adjust if PNG
+      ),
+    );
+
+    print("🚀 Uploading order with image...");
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    print("📩 Status Code: ${response.statusCode}");
+    print("📩 Response Body: ${response.body}");
+
+    // Parse JSON safely
+    Map<String, dynamic> data = {};
+    try {
+      data = jsonDecode(response.body);
+    } catch (_) {
+      final jsonStart = response.body.indexOf('{');
+      if (jsonStart != -1) {
+        final jsonString = response.body.substring(jsonStart);
+        data = jsonDecode(jsonString);
+      }
+    }
+
+    // Show message in Snackbar
+    if (data['status'] == 'success') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(data['message'] ?? 'Order placed successfully!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(data['message'] ?? 'Failed to place order'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
+  } catch (e) {
+    print("🔥 Exception: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Something went wrong!"),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  setState(() => isLoading = false);
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -268,36 +409,43 @@ bool _validateFields() {
             children: [
               // Upload Design Section - OPTIONAL (No red star)
               Text('Upload Design/Inspiration (Optional)',
-                  style: TextStyle(color: _kTextColor, fontSize: 16, fontWeight: FontWeight.w600)),
-              SizedBox(height: 8),
-              GestureDetector(
-                onTap: _showImageSourceDialog,
-                child: Container(
-                  height: 180,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    border: Border.all(color: const Color.fromARGB(255, 231, 239, 239), width: 2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: _image == null
-                      ? Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.add_a_photo, size: 40, color: _kAccentColor),
-                            SizedBox(height: 8),
-                            Text('Tap to Select from Camera or Gallery',
-                                style: TextStyle(color: _kHintColor)),
-                          ],
-                        )
-                      : ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: _isAssetImage(_image!.path)
-                              ? Image.asset(_image!.path, fit: BoxFit.cover)
-                              : Image.file(File(_image!.path), fit: BoxFit.cover),
-                        ),
-                ),
+        style: TextStyle(color: _kTextColor, fontSize: 11, fontWeight: FontWeight.w800)),
+    SizedBox(height: 8),
+    
+    // Image Container
+    GestureDetector(
+      onTap: _image != null
+          ? () {
+              // Show fullscreen image when tapped
+              _showFullScreenImage();
+            }
+          : _showImageSourceDialog,
+      child: Container(
+        height: 180,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          border: Border.all(color: const Color.fromARGB(255, 231, 239, 239), width: 2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: _image == null
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_a_photo, size: 40, color: _kAccentColor),
+                  SizedBox(height: 8),
+                  Text('Tap to Select from Camera or Gallery',
+                      style: TextStyle(color: _kHintColor, fontSize: 9)),
+                ],
+              )
+            : ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: _isAssetImage(_image!.path)
+                    ? Image.asset(_image!.path, fit: BoxFit.cover)
+                    : Image.file(File(_image!.path), fit: BoxFit.cover),
               ),
+      ),
+    ),
 
               // Category selection - REQUIRED
               SizedBox(height: 24),
@@ -356,14 +504,21 @@ bool _validateFields() {
 
               // Size Selection - OPTIONAL
              
-              SizeSelector(),
+              SizeSelector(
+              onSizeSelected: (size) {
+                setState(() {
+                  selectedSize = size;
+                });
+              },
+            ),
               SizedBox(height: 24.h),
+              /*
               _buildTextField(_sizeController, 'Custom Size (optional)'),
               SizedBox(height: 15.h),
-
+              */
               // Gold Color selection - OPTIONAL
               Text('Select Gold Color',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
               SizedBox(height: 12),
               // First row - 3 boxes
               Row(
@@ -423,7 +578,7 @@ bool _validateFields() {
               // Lab diamond specific sections - OPTIONAL
               if (_selectedCategory == 'Lab diamond') ...[
                 SizedBox(height: 20),
-                Text('Select Clarity', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                Text('Select Clarity', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
                 SizedBox(height: 12),
                 Wrap(
                   spacing: 10,
@@ -433,7 +588,7 @@ bool _validateFields() {
                       onTap: () => setState(() => _selectedClarity = clarity),
                       child: Container(
                         width: 80,
-                        padding: EdgeInsets.symmetric(vertical: 12),
+                        padding: EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
                           color: _selectedClarity == clarity ? _kPrimaryColor : Colors.grey.shade100,
                           borderRadius: BorderRadius.circular(10),
@@ -445,7 +600,7 @@ bool _validateFields() {
                         child: Center(
                           child: Text(clarity, style: TextStyle(
                             color: _selectedClarity == clarity ? Colors.white : Colors.black87,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w600,fontSize: 12
                           )),
                         ),
                       ),
@@ -454,7 +609,7 @@ bool _validateFields() {
                 ),
 
                 SizedBox(height: 25),
-                Text('Stone Color', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                Text('Stone Color', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
                 SizedBox(height: 12),
                 Wrap(
                   spacing: 10,
@@ -485,7 +640,7 @@ bool _validateFields() {
                 ),
 
                 SizedBox(height: 25),
-                Text('Certification', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                Text('Certification', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
                 SizedBox(height: 12),
                 Wrap(
                   spacing: 10,
@@ -516,7 +671,7 @@ bool _validateFields() {
                 ),
 
                 SizedBox(height: 25),
-                Text('Color Stone', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                Text('Color Stone', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
                 SizedBox(height: 12),
                 Wrap(
                   spacing: 10,
@@ -552,6 +707,7 @@ bool _validateFields() {
 
               // COMMON FIELDS - Only Quantity is REQUIRED
               SizedBox(height: 20),
+                _buildTextField(_productController, 'Product',),
               _buildTextField(_lengthController, 'Length (e.g., 18 cm)',),
               _buildTextField(_weightController, 'Desired Weight (e.g., 5.2g)'),
              _buildTextField(_quantityController, 'Quantity', 
@@ -587,47 +743,9 @@ bool _validateFields() {
                             ElevatedButton(
                               onPressed: () {
                                 Navigator.of(context).pop();
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (BuildContext context) {
-                                    return Dialog(
-                                      backgroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25.0)),
-                                      child: Padding(
-                                        padding: EdgeInsets.all(30),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
-                                              width: 80, height: 80,
-                                              decoration: BoxDecoration(color: Colors.green.shade100, shape: BoxShape.circle),
-                                              child: Icon(Icons.check, color: Colors.green, size: 40),
-                                            ),
-                                            SizedBox(height: 20),
-                                            Text("Your Order Confirmed!", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _kTextColor)),
-                                            SizedBox(height: 15),
-                                            Text("Your custom jewelry order has been successfully placed.", style: TextStyle(fontSize: 16, color: _kHintColor)),
-                                            SizedBox(height: 25),
-                                            ElevatedButton(
-                                              onPressed: () {
-                                                Navigator.of(context).pop();
-                                                _placeOrder();
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: _kPrimaryColor,
-                                                foregroundColor: Colors.white,
-                                                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                              ),
-                                              child: Text("OK", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                );
+
+                                _showBigSuccessDialog();
+                               
                               },
                               style: ElevatedButton.styleFrom(backgroundColor: _kPrimaryColor, foregroundColor: Colors.white),
                               child: Text("YES", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -756,4 +874,156 @@ bool _validateFields() {
       ),
     );
   }
+
+
+
+  void _showFullScreenImage() {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: EdgeInsets.all(0),
+        child: Stack(
+          children: [
+            // Fullscreen image
+            Container(
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+              color: Colors.black.withOpacity(0.9),
+              child: InteractiveViewer(
+                panEnabled: true,
+                minScale: 0.5,
+                maxScale: 3.0,
+                child: Center(
+                  child: _isAssetImage(_image!.path)
+                      ? Image.asset(_image!.path)
+                      : Image.file(File(_image!.path)),
+                ),
+              ),
+            ),
+            
+            // Close button
+            Positioned(
+              top: 40,
+              right: 20,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.close, color: Colors.white, size: 30),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+            ),
+            
+            // Edit/Change button
+            Positioned(
+              top: 40,
+              left: 20,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.edit, color: Colors.white, size: 25),
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Close fullscreen
+                    _showImageSourceDialog(); // Show image picker
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+
+void _showBigSuccessDialog() {
+  showGeneralDialog(
+    context: context,
+    barrierDismissible: false,
+    barrierColor: Colors.black54, // background dim
+    transitionDuration: Duration(milliseconds: 300),
+    pageBuilder: (context, animation1, animation2) {
+      return SafeArea(
+        child: Scaffold(
+          backgroundColor: Colors.black54, // semi-transparent background
+          body: Center(
+            child: Container(
+              width: double.infinity, // full width
+              height: double.infinity, // full height
+              color: Colors.white, // main dialog background
+              padding: EdgeInsets.all(40),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Big success icon
+                  Container(
+                    width: 150,
+                    height: 150,
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade100,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.check, color: Colors.green, size: 80),
+                  ),
+                  SizedBox(height: 30),
+                  Text(
+                    "🎉 Order Confirmed!",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: _kPrimaryColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 20),
+                  Text(
+                    "Your custom jewelry order has been successfully placed!\n\nOur team will contact you within 24 hours.",
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: _kHintColor,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 40),
+                  SizedBox(
+                    height: 60,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop(); // close dialog
+                        _submitOrder(); // call order API
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kPrimaryColor,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(horizontal: 60, vertical: 20),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ),
+                      child: Text(
+                        "GOT IT",
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
 }

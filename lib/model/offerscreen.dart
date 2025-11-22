@@ -10,6 +10,7 @@ class Offer {
   
  final String? status;
 final String? subproduct;
+ final String? stone;
 
  String? whish;
  String? cart;
@@ -30,6 +31,7 @@ final String? subproduct;
     required this.description,
      this.whish,
      this.cart,
+     required this.stone,
     
     this.grossWeight,
     this.netWeight,
@@ -72,7 +74,7 @@ final String? subproduct;
 
         whish: (json['whislist'] ?? "").toString().toUpperCase(),
         cart: (json['cart'] ?? "").toString().toUpperCase(),
-        
+        stone: json['stone'],
         description: json['description'],
         grossWeight: json['grossWeight'],
         netWeight: json['netWeight'],

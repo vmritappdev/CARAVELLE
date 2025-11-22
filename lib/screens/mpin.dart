@@ -262,55 +262,57 @@ Future<void> _authenticateUser() async {
     );
   }
 
-  Widget _buildKeypadButton({
-    required String label,
-    VoidCallback? onTap,
-    bool isDelete = false,
-    bool isTransparent = false,
-  }) {
-    return Padding(
-      padding:  EdgeInsets.symmetric(vertical: 15.r), // Reduced padding
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const CircleBorder(),
-        child: Container(
-          height: 50.h, // Smaller buttons
-          width: 50.w,
-          decoration: BoxDecoration(
-            color: isTransparent
-                ? Colors.transparent
-                : keypadButtonColor,
-            shape: BoxShape.circle,
-            boxShadow: [
-              if (!isTransparent)
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  spreadRadius: 1,
-                  blurRadius: 2, // Reduced blur
-                  offset: const Offset(0, 1), // Smaller offset
-                ),
-            ],
-          ),
-          child: Center(
-            child: isDelete
-                ? Icon(
-                    Icons.backspace_outlined,
-                    size: 22, // Smaller icon
-                    color: primaryTeal,
-                  )
-                : Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 20.sp, // Smaller font
-                      fontWeight: FontWeight.w500,
-                      color: isTransparent ? Colors.transparent : textOnLight,
-                    ),
+Widget _buildKeypadButton({
+  required String label,
+  VoidCallback? onTap,
+  bool isDelete = false,
+  bool isTransparent = false,
+}) {
+  return Padding(
+    padding: EdgeInsets.symmetric(vertical: 15.r),
+    child: InkWell(
+      onTap: onTap,
+      customBorder: const CircleBorder(),
+      child: Container(
+        height: 50.h,
+        width: 50.w,
+        decoration: BoxDecoration(
+          color: isTransparent ? Colors.transparent : keypadButtonColor,
+          shape: BoxShape.circle,
+          boxShadow: [
+            if (!isTransparent)
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.2),
+                spreadRadius: 1,
+                blurRadius: 2,
+                offset: const Offset(0, 1),
+              ),
+          ],
+        ),
+        child: Center(
+          child: isDelete
+              ? Icon(
+                  Icons.backspace_outlined,
+                  size: 22,
+                  color: primaryTeal,
+                )
+              : Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: "Inter",           // <-- Added
+                    fontWeight: FontWeight.bold,   // <-- SEMIBOLD
+                    fontSize: 20.sp,
+                    color: isTransparent
+                        ? Colors.transparent
+                        : textOnLight,
                   ),
-          ),
+                ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -352,8 +354,9 @@ Future<void> _authenticateUser() async {
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontStyle: FontStyle.italic,
+                                     fontFamily: "Inter",   
                                   fontSize: AppTheme.logoSize,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.bold,
                                   letterSpacing: 1.2,
                                 ),
                               ),
@@ -407,7 +410,7 @@ Future<void> _authenticateUser() async {
                           ),
                         ),
 
-                      const SizedBox(height: 30), // Reduced spacing
+                      const SizedBox(height: 20), // Reduced spacing
 
                       // MPIN Input Dots
                       _buildPinInput(),

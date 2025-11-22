@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 class SizeSelector extends StatefulWidget {
+  final ValueChanged<String?> onSizeSelected;
+
+  SizeSelector({Key? key, required this.onSizeSelected}) : super(key: key);
+
   @override
   _SizeSelectorState createState() => _SizeSelectorState();
 }
@@ -57,6 +61,7 @@ class _SizeSelectorState extends State<SizeSelector> {
                   _isCustomSelected = false;
                   _sizeController.text = size;
                 });
+                widget.onSizeSelected(_selectedSize); // ✅ parent ki pass
               });
             }).toList(),
             _buildSelectableBox('Custom', _isCustomSelected, () {
@@ -64,22 +69,30 @@ class _SizeSelectorState extends State<SizeSelector> {
                 _isCustomSelected = true;
                 _selectedSize = null;
                 _sizeController.clear();
+                _customSizeController.clear();
               });
+              widget.onSizeSelected(null); // initial ga null pass
             }),
           ],
         ),
         if (_isCustomSelected) ...[
           SizedBox(height: 10),
-          TextField(
-            controller: _customSizeController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: 'Enter custom size',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          SizedBox(
+            height: 50,
+            child: TextField(
+              controller: _customSizeController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Enter custom size',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onChanged: (value) {
+                _sizeController.text = value;
+                widget.onSizeSelected(value.isNotEmpty ? value : null); // ✅ pass custom value
+              },
             ),
-            onChanged: (value) {
-              _sizeController.text = value;
-            },
           ),
         ],
       ],
